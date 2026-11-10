@@ -2,10 +2,27 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// عند النشر على GitHub Pages يصير الرابط username.github.io/repo-name
-// فيلزم أن يعرف التطبيق أنه يقع داخل مجلد فرعي. يُضبط وقت البناء
-// بمتغيّر البيئة VITE_BASE، ويبقى "/" أثناء التطوير المحلي.
-const base = process.env.VITE_BASE || '/';
+// كل مسارات البناء نسبية («./») لا مطلقة: فلا يُكتب في البناء عنوان الموقع ولا مساره، ويعمل
+// التطبيق كما هو من الجذر (GitHub Pages ونسخ معاينة Netlify) ومن أي مجلد فرعي لو تغيّر العنوان.
+// وكان سابقًا يُحسب مسار فرعي وقت البناء من اسم الحساب، فلما تغيّر الاسم ثم رجع بقي آخر بناء
+// يطلب ملفاته من مسار لم يعد موجودًا، فعلق التطبيق على ستارة الإقلاع.
+const base = './';
+
+// صفحة المعاينة أداة لا جزء من التطبيق: لا يُحقن فيها رابط الـ manifest ولا تسجيل عامل الخدمة
+// (المسار النسبي فيها يشير إلى preview/ لا إلى مجلد التطبيق)
+const previewWithoutPwa = {
+  name: 'preview-without-pwa',
+  enforce: 'post',
+  transformIndexHtml: {
+    order: 'post',
+    handler(html, ctx) {
+      if (!/\/preview\/index\.html$/.test(ctx.path)) return html;
+      return html
+        .replace(/<link rel="manifest"[^>]*>/, '')
+        .replace(/<script id="vite-plugin-pwa:register-sw"[^>]*><\/script>/, '');
+    },
+  },
+};
 
 export default defineConfig({
   base,
@@ -34,8 +51,9 @@ export default defineConfig({
           'إنشاء: سامي أبصار الإسلام',
         lang: 'ar',
         dir: 'rtl',
-        start_url: base,
-        scope: base,
+        // نسبيان إلى ملف الـ manifest نفسه، وهو في مجلد التطبيق
+        start_url: '.',
+        scope: '.',
         display: 'standalone',
         orientation: 'any',
         // خلفية الشاشة التي يعرضها النظام لحظة الإقلاع — كحلية لتتصل
@@ -63,7 +81,11 @@ export default defineConfig({
         // وصفحة المعاينة الداخلية لا تُخزَّن مسبقًا: أداة لصاحب المشروع لا جزء من التطبيق
         globIgnores: ['fonts/qcf4/**', 'preview/**'],
         maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
-        navigateFallback: base + 'index.html',
+        // نسبي إلى موضع عامل الخدمة (مجلد التطبيق)
+        navigateFallback: 'index.html',
+        // إصلاح لمرة واحدة لمن علِق عنده بناء المسار الفرعي القديم: يعيد تحميل الصفحات المفتوحة
+        // فور تفعيل عامل الخدمة الجديد (public/sw-recover.js)
+        importScripts: ['sw-recover.js'],
         // لا يُعاد التطبيق بدل صفحة المعاينة إذا كُتب مسارها مباشرة (بشرطة أخيرة أو بدونها)
         navigateFallbackDenylist: [/\/preview(\/|\/index\.html)?$/],
         runtimeCaching: [
@@ -81,5 +103,6 @@ export default defineConfig({
         ],
       },
     }),
+    previewWithoutPwa,
   ],
 });

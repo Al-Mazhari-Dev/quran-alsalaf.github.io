@@ -2,6 +2,8 @@
 
 ## الجلسات السحابية (claude.ai/code)
 
+المستودع: `quran-alsalaf/quran-alsalaf.github.io` — التطبيق المنشور: https://quran-alsalaf.github.io/
+
 هذي القواعد للجلسات السحابية فقط. في الجلسات المحلية على الجهاز اتبع تعليمات المستخدم في نفس الجلسة.
 
 ### الرفع والـ Pull Request
