@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import SplashScreen from './components/SplashScreen.jsx';
 import Reader from './components/Reader.jsx';
 import ReadingMode from './components/ReadingMode.jsx';
@@ -18,6 +18,8 @@ import { pause, play, resume, stop, usePlayer } from './lib/player.js';
 import { toArabicDigits } from './data/quran.js';
 import { pageVerses, verseLabel } from './lib/study.js';
 import { saveRange, useUserData } from './lib/userdata.js';
+import { spreadStart } from './lib/layout.js';
+import { hasOpenLayer } from './lib/layers.js';
 import './App.css';
 
 // أقصر مدّة تبقى فيها شاشة الافتتاح ولو كانت البيانات جاهزة فورًا من ذاكرة
@@ -25,6 +27,8 @@ import './App.css';
 // وتبقى أطول من ذلك إن طال تحميل المصحف أول مرة.
 const SPLASH_MIN_MS = 0; // لا شاشة ثانية: تكفي شاشة النظام (أيقونة التطبيق) ثم المصحف مباشرة
 const SPLASH_FADE_MS = 420;
+// الأزرار العائمة الظاهرة بتحريك الفأرة تختفي بعد توقفها هذه المدة
+const MOUSE_IDLE_MS = 2500;
 
 export default function App() {
   const [quran, setQuran] = useState(null);
@@ -44,13 +48,17 @@ export default function App() {
   // وضع القراءة (٢٠٢٦-١٠-١٨): تدفّق رأسي بتمرير تلقائي. لا يُحفظ بين الجلسات: يفتح التطبيق بالعادي دائمًا
   const [reading, setReading] = useState(false);
   const [page, setPage] = useState(readLastPage);
+  // الصفحتان معًا (الشاشات الكبيرة): يبلّغ به القارئ بحسب المساحة المتاحة
+  const [spread, setSpread] = useState(false);
+  const shownPages = useMemo(() => (spread ? [spreadStart(page), spreadStart(page) + 1] : [page]), [spread, page]);
   const user = useUserData();
   const selection = user.range?.length === 2 ? user.range : null;
+  // بلا مقدار محدد: آيات الصفحة الظاهرة، أو آيات الصفحتين معًا من أول اليمنى إلى آخر اليسرى
   const range = useMemo(() => {
     if (!quran) return [];
-    if (!selection) return pageVerses(quran, page);
+    if (!selection) return [...new Set(shownPages.flatMap((p) => pageVerses(quran, p)))];
     return Array.from({ length: selection[1] - selection[0] + 1 }, (_, i) => selection[0] + i);
-  }, [quran, page, selection?.[0], selection?.[1]]);
+  }, [quran, shownPages, selection?.[0], selection?.[1]]);
   const rangePages = useMemo(() => (quran ? [...new Set(range.map((v) => quran.verses[v].p))] : []), [quran, range]);
 
   // الضغط المطوّل على آية، وقائمة اختيار آية النطاق، والتنبيه القصير
@@ -70,7 +78,13 @@ export default function App() {
   const player = usePlayer();
   const [listenOpen, setListenOpen] = useState(false);
   const listenSuras = useMemo(() => (quran ? [...new Set(range.map((v) => quran.verses[v].s))] : []), [quran, range]);
-  const listenLabel = quran && (selection ? verseLabel(quran, selection) : `الصفحة ${toArabicDigits(page)}`);
+  const listenLabel =
+    quran &&
+    (selection
+      ? verseLabel(quran, selection)
+      : spread
+        ? `الصفحتان ${toArabicDigits(shownPages[0])}–${toArabicDigits(shownPages[1])}`
+        : `الصفحة ${toArabicDigits(page)}`);
   const startListening = async () => {
     const result = await play(quran, range);
     if (result === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
@@ -80,7 +94,8 @@ export default function App() {
   useEffect(() => {
     if (player.error) showToast(player.error.text);
   }, [player.error, showToast]);
-  // تقليب الصفحة تلقائيًا مع أول آية في الصفحة التالية
+  // تقليب الصفحة تلقائيًا مع أول آية في الصفحة التالية (وفي الزوج: لا يتحرك المصحف حتى يبدأ
+  // القارئ أول آية في الزوج التالي، لأن الانتقال إلى صفحة من الزوج الظاهر لا يغيّره)
   useEffect(() => {
     if (quran && player.v != null) {
       const p = quran.verses[player.v].p;
@@ -128,16 +143,29 @@ export default function App() {
   // الانتقال بين المصحف والصفحات السفلية انزلاقٌ رأسي يتبع الإصبع كتمرير «يوتيوب شورتس»:
   // المصحف يصعد والصفحة السفلية تصعد تحته معًا. والموضع يُضبط في DOM مباشرة لا عبر حالة
   // React، لتبقى الحركة سلسة. lift: كم صعد المصحف (٠ مغلق، ارتفاع الشاشة مفتوح).
+  //
+  // وفي الشاشة الكبيرة (الصفحتان معًا) تُفتح الصفحة السفلية لوحةً متمركزة فوق المصحف بعرض مريح
+  // للقراءة: يبقى المصحف مكانه، وتصعد اللوحة وحدها ويُعتَّم ما خلفها تدريجًا.
   const appRef = useRef(null);
   const studyRef = useRef(null);
+  const backdropRef = useRef(null);
+  const panelRef = useRef(false);
+  panelRef.current = spread;
   const setLift = useCallback((lift, animate) => {
     const h = window.innerHeight;
     const ease = animate ? 'transform 320ms cubic-bezier(0.2, 0.8, 0.25, 1)' : 'none';
     const app = appRef.current;
     const study = studyRef.current;
+    const panel = panelRef.current;
     if (app) {
       app.style.transition = ease;
-      app.style.transform = lift ? `translate3d(0, ${-lift}px, 0)` : '';
+      app.style.transform = lift && !panel ? `translate3d(0, ${-lift}px, 0)` : '';
+    }
+    const backdrop = backdropRef.current;
+    if (backdrop) {
+      backdrop.style.transition = animate ? 'opacity 320ms ease' : 'none';
+      backdrop.style.opacity = panel ? String(Math.max(0, Math.min(1, lift / h))) : '0';
+      backdrop.style.pointerEvents = panel && lift > 0 ? 'auto' : 'none';
     }
     // موضع الصفحة السفلية صريح دائمًا: فأصلها في CSS تحت حافة الشاشة
     if (study) {
@@ -160,6 +188,16 @@ export default function App() {
     },
     [setLift]
   );
+  // فتح الصفحات السفلية وإغلاقها بزرّ (للفأرة ولوحة المفاتيح)، وبمفتاح Esc وبالنقر خارج اللوحة
+  const openStudy = useCallback(() => {
+    setChromeOpen(false);
+    setStudyOpen(true);
+    setLift(window.innerHeight, true);
+  }, [setLift]);
+  const closeStudy = useCallback(() => {
+    setStudyOpen(false);
+    setLift(0, true);
+  }, [setLift]);
   const onStudyDrag = useCallback((dy) => setLift(window.innerHeight - dy, false), [setLift]);
   const onStudyDragEnd = useCallback(
     (dy, ms) => {
@@ -171,12 +209,91 @@ export default function App() {
     [setLift]
   );
 
-  // عند تغيّر حجم الشاشة والصفحة مفتوحة، تبقى مفتوحة في موضعها الصحيح
+  // عند تغيّر حجم الشاشة (أو تبدّل الصفحة واللوحة) والصفحة مفتوحة، تبقى مفتوحة في موضعها الصحيح
   useEffect(() => {
     const fit = () => studyOpen && setLift(window.innerHeight, false);
     window.addEventListener('resize', fit);
     return () => window.removeEventListener('resize', fit);
   }, [studyOpen, setLift]);
+  const studyOpenRef = useRef(false);
+  studyOpenRef.current = studyOpen;
+  useLayoutEffect(() => {
+    if (studyOpenRef.current) setLift(window.innerHeight, false);
+  }, [spread, setLift]);
+
+  // ---------- الفأرة ولوحة المفاتيح ----------
+  // تحريك الفأرة يُظهر الأزرار العائمة (وسهمي التقليب)، وتختفي بعد توقفها — إلا والمؤشر فوقها
+  // أو التركيز فيها. ولمس الشاشة يبقى كما كان: لمسة تُظهرها وأخرى تخفيها، بلا مؤقّت.
+  const [mouseUi, setMouseUi] = useState(false);
+  const hideTimer = useRef(0);
+  const quiet = useRef(null); // موضع نقرة أخفت الأزرار: لا تعود بحركة يسيرة بعدها
+  const overChrome = useRef(false);
+  const readingRef = useRef(false);
+  readingRef.current = reading;
+  const scheduleHide = useCallback(() => {
+    clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => {
+      if (overChrome.current || document.activeElement?.closest?.('.topbar, .dock, .reader__arrow')) return;
+      setChromeOpen(false);
+    }, MOUSE_IDLE_MS);
+  }, []);
+  useEffect(() => {
+    const onMove = (e) => {
+      if (e.pointerType !== 'mouse' || e.buttons || readingRef.current || hasOpenLayer()) return;
+      if (quiet.current) {
+        if (Math.hypot(e.clientX - quiet.current.x, e.clientY - quiet.current.y) < 24) return;
+        quiet.current = null;
+      }
+      overChrome.current = !!e.target.closest?.('.topbar__icon, .topbar__search, .dock__slot, .dock__study, .reader__arrow');
+      setMouseUi(true);
+      setChromeOpen(true);
+      scheduleHide();
+    };
+    const onDown = (e) => {
+      if (e.pointerType !== 'mouse') setMouseUi(false);
+    };
+    // لوحة المفاتيح وحدها: أول Tab يُظهر الأزرار العائمة ويركّز أولها
+    const onKey = (e) => {
+      if (e.key !== 'Tab' || readingRef.current || hasOpenLayer()) return;
+      if (document.activeElement?.closest?.('.topbar, .dock')) return;
+      e.preventDefault();
+      setChromeOpen(true);
+      requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('.topbar button:not(:disabled)')?.focus()));
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      clearTimeout(hideTimer.current);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [scheduleHide]);
+  // لمسة على الصفحة: تُظهر الأزرار أو تخفيها. وبالفأرة إن أُظهرت اختفت بعد توقفها كالحركة
+  const onReaderTap = useCallback(
+    (type, x, y) => {
+      setChromeOpen((open) => {
+        if (type !== 'mouse') return !open;
+        if (open) {
+          quiet.current = { x, y };
+          clearTimeout(hideTimer.current);
+          return false;
+        }
+        scheduleHide();
+        return true;
+      });
+    },
+    [scheduleHide]
+  );
+  // Esc يخفي الأزرار العائمة إن لم تكن فوق المصحف طبقة مفتوحة
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !hasOpenLayer()) setChromeOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   // عرض عمود أسطر المصحف: يُحاذى به الشريط العلوي، فتقع أيقونتاه عند حافتي الآيات
   const [column, setColumn] = useState(null);
 
@@ -185,8 +302,11 @@ export default function App() {
     const minDelay = new Promise((r) => setTimeout(r, SPLASH_MIN_MS));
     // يُنتظر خط الصفحة التي يُفتح عليها المصحف، وخطّا إطار السورة والبسملة، لتظهر الصفحة
     // كاملة من أول إطار. وإن تعذّر خط الصفحة (لا اتصال في أول فتح لها) لا يُعطَّل الافتتاح.
+    // ومعه خط الصفحة المقابلة لها، فإن فُتح المصحف صفحتين ظهرتا معًا
+    const last = readLastPage();
     const fonts = Promise.all([
-      loadPageFont(readLastPage()),
+      loadPageFont(last),
+      loadPageFont(last % 2 ? last + 1 : last - 1),
       document.fonts.load('32px "SurahHeader"'),
       document.fonts.load('32px "QCF4Basmala"'),
     ]).catch(() => {});
@@ -210,22 +330,27 @@ export default function App() {
   // الانتقال إلى صفحة من القائمة الجانبية أو البحث
   const gotoPageNumber = useCallback((p) => setGotoPage({ page: p, n: Date.now() }), []);
 
+  // ما دامت فوق المصحف صفحة أو قائمة أو بطاقة، فهو خارج التركيز ولوحة المفاتيح (inert)
+  const covered =
+    studyOpen || settingsOpen || sideMenuOpen || searchOpen || aboutOpen || !!pressed || rangeMenuOpen || !!picking || listenOpen;
+  const chromeShown = chromeOpen && !covered;
+
   return (
     <>
       {!splashDone && <SplashScreen leaving={splashLeaving} />}
 
       <div
         ref={appRef}
-        className="app"
+        className={`app${spread ? ' app--spread' : ''}`}
         style={column ? { '--col-w': `${column}px` } : undefined}
-        inert={studyOpen ? '' : undefined}
+        inert={covered ? '' : undefined}
       >
         {/* الشريط العلوي عائم فوق أعلى الصفحة كالخانتين السفليتين: القائمة يمينًا، والبحث
             في الوسط، والإعدادات يسارًا — بعرض عمود الآيات */}
         <header
-          className={`topbar${chromeOpen ? ' topbar--open' : ''}`}
-          aria-hidden={!chromeOpen}
-          inert={chromeOpen ? undefined : ''}
+          className={`topbar${chromeShown ? ' topbar--open' : ''}`}
+          aria-hidden={!chromeShown}
+          inert={chromeShown ? undefined : ''}
         >
           {/* أيقونة القائمة الجانبية أعلى اليمين (الفصل ٧): فهرس السور، الملاحظات، العلامات */}
           <button className="topbar__icon" type="button" onClick={() => setSideMenuOpen(true)} disabled={!quran} aria-label="القائمة">
@@ -263,9 +388,11 @@ export default function App() {
           {quran && !reading && (
             <Reader
               quran={quran}
-              onTap={() => setChromeOpen((open) => !open)}
+              onTap={onReaderTap}
               onColumn={setColumn}
               onPage={setPage}
+              onSpread={setSpread}
+              arrows={chromeShown && mouseUi}
               onVDrag={onVDrag}
               onVDragEnd={onVDragEnd}
               onLongPress={onLongPress}
@@ -284,10 +411,18 @@ export default function App() {
             فلا يتغير حجم خط المصحف بظهورهما. */}
         {!reading && (
           <footer
-            className={`dock${chromeOpen ? ' dock--open' : ''}`}
-            aria-hidden={!chromeOpen}
-            inert={chromeOpen ? undefined : ''}
+            className={`dock${chromeShown ? ' dock--open' : ''}`}
+            aria-hidden={!chromeShown}
+            inert={chromeShown ? undefined : ''}
           >
+            {/* فتح الصفحات السفلية بزرّ — يظهر على الأجهزة التي تعمل بالفأرة وحدها (App.css)،
+                إضافةً إلى السحب. وعلى الجوال باللمس لا يظهر: يبقى السحب وحده كما كان */}
+            <button className="dock__study" type="button" disabled={!quran} onClick={openStudy}>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 15l6-6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              التفسير والمعاني والعمل
+            </button>
             {/* الاستماع: قبل التشغيل تفتح إعداداته، وأثناءه تصير الخانة أزرار التحكم كلها
                 (إيقاف مؤقت/استئناف، والإعدادات، والإيقاف التام) — بلا شريط صوت منفصل */}
             {player.status === 'idle' || !quran ? (
@@ -356,10 +491,13 @@ export default function App() {
       {quran && <SideMenu quran={quran} open={sideMenuOpen} onGoto={gotoPageNumber} onClose={() => setSideMenuOpen(false)} />}
       {quran && searchOpen && <SearchOverlay quran={quran} onGoto={gotoPageNumber} onClose={() => setSearchOpen(false)} />}
       <AboutPage open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <div ref={backdropRef} className="study-backdrop" onClick={closeStudy} aria-hidden="true" />
       {quran && (
         <StudySheet
           ref={studyRef}
           open={studyOpen}
+          panel={spread}
+          onClose={closeStudy}
           onDrag={onStudyDrag}
           onDragEnd={onStudyDragEnd}
           onToast={showToast}

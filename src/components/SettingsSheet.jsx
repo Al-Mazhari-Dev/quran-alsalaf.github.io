@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { readTheme, toggleTheme } from '../lib/theme.js';
 import { readWeeksTint, setWeeksTint } from '../lib/settings.js';
 import './SettingsSheet.css';
+import { useLayer } from '../lib/layers.js';
 
 /*
   الإعدادات: صفحة كاملة مستقلة تغطي المصحف، يُرجع منها بسهم الرجوع (بطلب صاحب المشروع).
@@ -12,12 +13,7 @@ export default function SettingsSheet({ open, onClose, onThemeChange, onStartRea
   const [theme, setThemeState] = useState(readTheme);
   const [weeks, setWeeks] = useState(readWeeksTint);
 
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  useLayer(onClose, open);
 
   const chooseTheme = (t) => {
     if (t === readTheme()) return;

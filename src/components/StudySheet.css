@@ -316,3 +316,59 @@
   font-size: var(--text-xs);
   color: var(--ink-faint);
 }
+
+/* ===== الإغلاق بالفأرة ===== */
+.study__close {
+  display: none;
+  flex: none;
+  place-items: center;
+  align-self: center;
+  width: 34px;
+  height: 34px;
+  margin-inline-start: 6px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.study__close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.study__close:hover {
+  background: var(--surface-3);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .study__close {
+    display: grid;
+  }
+
+  /* شريط التبويبات مقبض السحب بالفأرة */
+  .study__tabs {
+    cursor: grab;
+  }
+
+  .study__tabs:active {
+    cursor: grabbing;
+  }
+}
+
+/* ===== اللوحة المتمركزة (الشاشة الكبيرة: الصفحتان معًا) =====
+   فوق المصحف بعرض مريح للقراءة لا ممتدة على كل العرض، وما خلفها معتَّم (.study-backdrop في App.css) */
+.study--panel {
+  inset: calc(24px + var(--safe-top)) 0 0;
+  width: min(760px, calc(100% - 48px));
+  margin-inline: auto;
+  padding-top: 0;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  box-shadow: var(--shadow-float);
+  overflow: hidden;
+}
+
+.study--panel .study__close {
+  display: grid;
+}

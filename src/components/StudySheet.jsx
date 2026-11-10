@@ -14,6 +14,7 @@ import {
   verseText,
 } from '../lib/study.js';
 import { copyText } from '../lib/userdata.js';
+import { useLayer } from '../lib/layers.js';
 import './StudySheet.css';
 
 /*
@@ -40,12 +41,14 @@ export const UNAVAILABLE =
 export const NO_MEANINGS = 'لا توجد معاني كلمات ذُكرت في هذه الآية';
 export const NO_ACTIONS = 'لا يوجد عمل بالآيات ذُكر في هذه الآية';
 
-const StudySheet = forwardRef(function StudySheet({ open, onDrag, onDragEnd, onToast, quran, verses, pages }, ref) {
+// panel: لوحة متمركزة فوق المصحف (الشاشة الكبيرة) بدل صفحة كاملة. onClose: الإغلاق بزرّ ✕ وبمفتاح Esc
+const StudySheet = forwardRef(function StudySheet({ open, panel, onClose, onDrag, onDragEnd, onToast, quran, verses, pages }, ref) {
   const [tab, setTab] = useState('tafsir');
   const [slide, setSlide] = useState(0); // اتجاه آخر انتقال بين التبويبات، لحركة المحتوى
   const bodyRef = useRef(null);
   const handlers = useRef({});
   handlers.current = { onDrag, onDragEnd, tab };
+  useLayer(onClose, open);
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = 0;
@@ -98,11 +101,51 @@ const StudySheet = forwardRef(function StudySheet({ open, onDrag, onDragEnd, onT
         if (i >= 0 && i < ACTIVE_TABS.length) goTabRef.current(ACTIVE_TABS[i]);
       }
     };
+    // السحب بالفأرة كما يُسحب بالإصبع: إلى أسفل من شريط التبويبات (لا من المحتوى، ففيه
+    // تحديد النص)، فتنزل الصفحة مع المؤشر وتُغلق إن جاوز السحب حدّه. والنقر بلا سحب يبقى نقرًا
+    let m = null;
+    const onPDown = (e) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0 || body.contains(e.target)) return;
+      m = { id: e.pointerId, y: e.clientY, t0: e.timeStamp, dragging: false };
+    };
+    const onPMove = (e) => {
+      if (!m || m.id !== e.pointerId) return;
+      const dy = e.clientY - m.y;
+      if (!m.dragging) {
+        if (dy < 8) return;
+        m.dragging = true;
+        try {
+          root.setPointerCapture(e.pointerId);
+        } catch {
+          // لا يلزم للسحب
+        }
+      }
+      handlers.current.onDrag?.(Math.max(0, dy));
+    };
+    const onPUp = (e) => {
+      if (!m || m.id !== e.pointerId) return;
+      const { dragging, y, t0 } = m;
+      m = null;
+      if (!dragging) return;
+      handlers.current.onDragEnd?.(e.type === 'pointerup' ? Math.max(0, e.clientY - y) : 0, e.timeStamp - t0);
+      // النقرة التي تلي السحب لا تُعدّ ضغطًا على تبويب
+      const stop = (ev) => ev.stopPropagation();
+      root.addEventListener('click', stop, { capture: true, once: true });
+      setTimeout(() => root.removeEventListener('click', stop, { capture: true }), 0);
+    };
+    root.addEventListener('pointerdown', onPDown);
+    root.addEventListener('pointermove', onPMove);
+    root.addEventListener('pointerup', onPUp);
+    root.addEventListener('pointercancel', onPUp);
     root.addEventListener('touchstart', onStart, { passive: true });
     root.addEventListener('touchmove', onMove, { passive: false });
     root.addEventListener('touchend', onEnd);
     root.addEventListener('touchcancel', onEnd);
     return () => {
+      root.removeEventListener('pointerdown', onPDown);
+      root.removeEventListener('pointermove', onPMove);
+      root.removeEventListener('pointerup', onPUp);
+      root.removeEventListener('pointercancel', onPUp);
       root.removeEventListener('touchstart', onStart);
       root.removeEventListener('touchmove', onMove);
       root.removeEventListener('touchend', onEnd);
@@ -113,7 +156,7 @@ const StudySheet = forwardRef(function StudySheet({ open, onDrag, onDragEnd, onT
   return (
     <section
       ref={ref}
-      className="study"
+      className={`study${panel ? ' study--panel' : ''}`}
       aria-hidden={!open}
       inert={open ? undefined : ''}
       role="dialog"
@@ -132,6 +175,13 @@ const StudySheet = forwardRef(function StudySheet({ open, onDrag, onDragEnd, onT
             {t.name}
           </button>
         ))}
+        {/* زرّ الإغلاق: على الأجهزة التي تعمل بالفأرة وفي اللوحة (StudySheet.css)، وعلى الجوال
+            باللمس يبقى الإغلاق بالسحب كما كان */}
+        <button type="button" className="study__close" onClick={onClose} aria-label="إغلاق">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
       </nav>
 
       <div className="study__body" ref={bodyRef}>

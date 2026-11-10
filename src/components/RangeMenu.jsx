@@ -1,5 +1,6 @@
 import { verseLabel } from '../lib/study.js';
 import './RangeMenu.css';
+import { useLayer } from '../lib/layers.js';
 
 /*
   تحديد مقدار الآيات (الفصل ٤، بطلب صاحب المشروع ٢٠٢٦-٠٩-٢٤): بطاقة عائمة أسفل الشاشة،
@@ -7,6 +8,7 @@ import './RangeMenu.css';
   (RangePicker). ونهاية المقدار لا تُفتح قبل تحديد بدايته.
 */
 export default function RangeMenu({ quran, range, onPickStart, onPickEnd, onClose }) {
+  useLayer(onClose);
   const start = range?.[0];
   const end = range?.length === 2 ? range[1] : null;
   return (

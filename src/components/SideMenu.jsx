@@ -4,6 +4,7 @@ import { verseLabel } from '../lib/study.js';
 import { BOOKMARK_COLORS, moveBookmark, removeBookmark, renameBookmark, setNote, useUserData } from '../lib/userdata.js';
 import RangePicker from './RangePicker.jsx';
 import './SideMenu.css';
+import { useLayer } from '../lib/layers.js';
 
 /*
   القائمة الجانبية (الفصل ٧): صفحة كاملة تنزلق من اليمين (أيقونتها في الشريط العلوي هناك)،
@@ -12,6 +13,7 @@ import './SideMenu.css';
 */
 export default function SideMenu({ quran, open, onGoto, onClose }) {
   const [tab, setTab] = useState('suras');
+  useLayer(onClose, open);
   const user = useUserData();
   // الملاحظات مرتبة بترتيب الآيات في المصحف لا بوقت إضافتها
   const noteEntries = useMemo(

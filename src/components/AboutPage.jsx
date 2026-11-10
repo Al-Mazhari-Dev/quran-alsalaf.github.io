@@ -1,4 +1,5 @@
 import './AboutPage.css';
+import { useLayer } from '../lib/layers.js';
 
 /*
   صفحة «عن التطبيق» (الفصل ١٢): نصّها حرفي كما في المواصفة، بلا أي تعديل ولا أي مصدر آخر
@@ -7,6 +8,7 @@ import './AboutPage.css';
   «المصادر» (بقي نصّ المصدر نفسه)، وزرّ لقناة تليجرام بدل رابط نصّي خام.
 */
 export default function AboutPage({ open, onClose }) {
+  useLayer(onClose, open);
   return (
     <div className={`about${open ? ' about--open' : ''}`} aria-hidden={!open} inert={open ? undefined : ''}>
       <section className="about__card" role="dialog" aria-modal="true" aria-label="عن التطبيق">

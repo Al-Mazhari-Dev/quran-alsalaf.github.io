@@ -125,3 +125,74 @@
   stroke: var(--ink-muted);
   stroke-width: 1.1;
 }
+
+/* ===== الصفحتان المتقابلتان (الشاشات الكبيرة) =====
+   الزوج يملأ موضعه في الشريط، والصفحتان متجاورتان في وسطه: الأولى (الفردية) يمينًا
+   لأن الاتجاه من اليمين لليسار. وبينهما كعب الكتاب. */
+.spread {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  background: var(--bg);
+}
+
+.sheet--half {
+  position: relative;
+  inset: auto;
+  flex: none;
+  height: 100%;
+  padding: 0;
+}
+
+/* كعب الكتاب: ظل هادئ جدًّا يتوسطه خط رفيع، بلا زخرفة */
+.spread__spine {
+  flex: none;
+  width: 36px;
+  margin-block: calc(var(--meta-h) * 0.5) 4px;
+  background:
+    linear-gradient(to right, transparent calc(50% - 0.5px), var(--border) calc(50% - 0.5px), var(--border) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to right, transparent, rgb(0 0 0 / 0.035) 50%, transparent);
+}
+
+:root[data-theme='dark'] .spread__spine {
+  background:
+    linear-gradient(to right, transparent calc(50% - 0.5px), var(--border) calc(50% - 0.5px), var(--border) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to right, transparent, rgb(0 0 0 / 0.22) 50%, transparent);
+}
+
+/* ===== سهما التقليب (للفأرة) =====
+   على جانبي المصحف، يظهران مع الأزرار العائمة عند تحريك الفأرة ويختفيان معها */
+.reader__arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.08);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 200ms ease, visibility 0s linear 200ms, background 160ms ease;
+}
+
+.reader__arrow--shown {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 200ms ease, visibility 0s, background 160ms ease;
+}
+
+.reader__arrow:hover {
+  background: var(--surface-2);
+}
+
+.reader__arrow svg {
+  width: 22px;
+  height: 22px;
+}

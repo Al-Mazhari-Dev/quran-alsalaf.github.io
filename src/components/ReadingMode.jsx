@@ -35,6 +35,9 @@ const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
 
 // startPage: الصفحة التي يبدأ منها · marks: إشارات المستخدم على الآيات · cardOpen: بطاقة آية مفتوحة
 // onLongPress(آية، مستطيل كلمتها) · onExit(الصفحة التي تشغل منتصف الشاشة)
+// أقصى عرض لعمود وضع القراءة (الشاشات الكبيرة)
+const READING_MAX_W = 640;
+
 export default function ReadingMode({ quran, startPage, marks, cardOpen, onLongPress, onExit }) {
   const flowRef = useRef(null);
   const [box, setBox] = useState(null);
@@ -55,7 +58,8 @@ export default function ReadingMode({ quran, startPage, marks, cardOpen, onLongP
     return () => ro.disconnect();
   }, []);
 
-  const layout = box ? pageLayout(quran, 1, { w: box.w - PAD_X * 2, h: box.h }, true) : null;
+  // عمود واحد متمركز بعرض مريح: على الشاشات الكبيرة لا يمتد على كل العرض ولا يتحول صفحتين
+  const layout = box ? pageLayout(quran, 1, { w: Math.min(box.w - PAD_X * 2, READING_MAX_W), h: box.h }, true) : null;
   const pageH = layout ? SEP_H + layout.pageHeight : 0; // ارتفاع كل صفحة في التدفق
   const lineH = layout ? layout.pageHeight / 15 : 0;
 

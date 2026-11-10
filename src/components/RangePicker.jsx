@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toArabicDigits } from '../data/quran.js';
 import './RangePicker.css';
+import { useLayer } from '../lib/layers.js';
 
 /*
   قائمة اختيار آية لتحديد النطاق (الفصل ٤): تمرير مستمر — السور بعناوينها، وتحت كل سورة
@@ -21,6 +22,7 @@ import './RangePicker.css';
 const PREVIEW_WORDS = 7;
 
 export default function RangePicker({ quran, mode, start, near, onPick, onClose, title }) {
+  useLayer(onClose);
   const listRef = useRef(null);
   const firstSura = mode === 'end' ? quran.verses[start].s : 1;
   const heading = title ?? (mode === 'end' ? 'اختر آية النهاية' : 'اختر آية البداية');

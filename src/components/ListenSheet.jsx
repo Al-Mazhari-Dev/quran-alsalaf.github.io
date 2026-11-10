@@ -4,6 +4,7 @@ import { covers, reciterById } from '../lib/reciters.js';
 import { FOREVER, REPEATS, cancelDownload, downloadRange, isDownloaded, setSettings, usePlayer } from '../lib/player.js';
 import ReciterPicker from './ReciterPicker.jsx';
 import './ListenSheet.css';
+import { useLayer } from '../lib/layers.js';
 
 /*
   إعدادات الاستماع (الفصل ٦): بطاقة تنزلق من أسفل الشاشة عند الخانة اليمنى —
@@ -16,6 +17,7 @@ export default function ListenSheet({ quran, verses, label, suras, onPlay, onClo
   const { settings, download } = player;
   const active = player.status !== 'idle';
   const [pickerOpen, setPickerOpen] = useState(false);
+  useLayer(onClose);
   const [downloaded, setDownloaded] = useState(false);
   useEffect(() => setDownloaded(isDownloaded(quran, verses)), [quran, verses, settings.reciter, download?.done]);
 

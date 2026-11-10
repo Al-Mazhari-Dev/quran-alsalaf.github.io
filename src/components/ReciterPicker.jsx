@@ -1,5 +1,6 @@
 import { covers, RECITERS } from '../lib/reciters.js';
 import './ReciterPicker.css';
+import { useLayer } from '../lib/layers.js';
 
 /*
   قائمة اختيار القارئ (الفصل ٦): صفحة كاملة تنزلق من الأسفل، بقائمة قرّاء ودائرة اختيار
@@ -7,6 +8,7 @@ import './ReciterPicker.css';
   اشتمل المقدار الحالي على سورة لم يُرفع تسجيلها.
 */
 export default function ReciterPicker({ chosen, suras, onPick, onClose }) {
+  useLayer(onClose);
   const shown = RECITERS.filter((r) => covers(r, suras));
   return (
     <div className="rcpick" role="dialog" aria-label="اختر القارئ">
