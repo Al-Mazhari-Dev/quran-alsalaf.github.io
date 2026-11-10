@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 const NOTES_KEY = 'hq.notes';
 const BOOKMARKS_KEY = 'hq.bookmarks';
 const RANGE_KEY = 'hq.range';
+const CONTENT_RANGE_KEY = 'hq.contentRange';
 const EVENT = 'hq-userdata';
 
 export const MAX_BOOKMARKS = 10;
@@ -80,15 +81,22 @@ export function removeBookmark(id) {
   write(BOOKMARKS_KEY, readBookmarks().filter((x) => x.id !== id));
 }
 
-// ---------- النطاق المحدد (الخانة اليسرى): [أول آية، آخر آية] أو بدايته وحدها ----------
+// ---------- المقداران المحددان: [أول آية، آخر آية] أو بدايته وحدها ----------
+// مقداران مستقلان تمامًا (٢٠٢٦-١١-١٠): مقدار الاستماع (ويتبعه إخفات ما خارجه في المصحف)،
+// ومقدار صفحات المحتوى (التفسير ومعاني الكلمات والعمل بالآيات). ويبقى كلٌّ حتى يُلغى بـ✕.
+// ومفتاح مقدار الاستماع هو مفتاح المقدار القديم، فيبقى ما حدّده المستخدم من قبل.
 export const readRange = () => read(RANGE_KEY, null);
 export const saveRange = (range) => write(RANGE_KEY, range);
+export const readContentRange = () => read(CONTENT_RANGE_KEY, null);
+export const saveContentRange = (range) => write(CONTENT_RANGE_KEY, range);
+
+const snapshot = () => ({ notes: readNotes(), bookmarks: readBookmarks(), range: readRange(), contentRange: readContentRange() });
 
 // تتحدّث عند أي تغيير في بيانات المستخدم
 export function useUserData() {
-  const [data, setData] = useState(() => ({ notes: readNotes(), bookmarks: readBookmarks(), range: readRange() }));
+  const [data, setData] = useState(snapshot);
   useEffect(() => {
-    const update = () => setData({ notes: readNotes(), bookmarks: readBookmarks(), range: readRange() });
+    const update = () => setData(snapshot());
     window.addEventListener(EVENT, update);
     return () => window.removeEventListener(EVENT, update);
   }, []);

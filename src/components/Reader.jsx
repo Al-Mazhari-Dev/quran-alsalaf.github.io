@@ -49,15 +49,14 @@ const TAP_MS = 350;
 const LONG_PRESS_MS = 450;
 
 // onColumn: يُبلَّغ به عرض عمود الأسطر، ليُحاذى به الشريط العلوي فوقه
-// onPage: يُبلَّغ بالصفحة الحالية (نطاق الصفحات السفلية)
-// onVDrag / onVDragEnd: السحب الرأسي أثناءه وعند رفع الإصبع (المسافة، والمدة) — به تصعد
-// الصفحات السفلية مع الإصبع (الفصل ٥)
+// onPage: يُبلَّغ بالصفحة الحالية (نطاق صفحات المحتوى والاستماع)
+// (صفحات المحتوى لا تُفتح بالسحب منذ ٢٠٢٦-١١-١٠: بزرّها في الشريط السفلي وحده)
 // onLongPress(آية، مستطيل كلمتها): ضغط مطوّل على آية
 // goto { page, n }: انتقال إلى صفحة بطلب من خارج القارئ (كاختيار آية من قائمة النطاق)
 // marks: إشارات بيانات المستخدم على الآيات (MushafPage)
 // onSpread(bool): يُبلَّغ به هل تُعرض الصفحتان معًا
-// arrows: إظهار سهمي التقليب على جانبي الصفحة (عند تحريك الفأرة)
-export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onVDrag, onVDragEnd, onLongPress, goto, marks, arrows }) {
+// arrows: إظهار سهمي التقليب على جانبي الزوج (عند تحريك الفأرة) — في عرض الصفحتين وحده
+export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLongPress, goto, marks, arrows }) {
   const [page, setPage] = useState(readLastPage);
   const [box, setBox] = useState(null);
   // الجوال الأفقي (٢٠٢٦-١٠-١٧): تملأ الصفحةُ العرضَ وتُمرَّر رأسيًّا داخل نفسها (src/lib/layout.js)
@@ -215,11 +214,7 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onVDr
         }
       }
     }
-    if (d.axis === 'y') {
-      // في وضع التمرير يتولّى المتصفح السحب الرأسي (تمريرًا)، وفتح الصفحات السفلية له طريقه أدناه
-      if (!scroll) onVDrag?.(my);
-      return;
-    }
+    // السحب الرأسي لا يفعل شيئًا (وفي وضع التمرير يتولّاه المتصفح تمريرًا)
     if (d.axis !== 'x') return;
 
     // السرعة تُحسب على آخر ١٠٠ مللي ثانية لا بين حدثين متتاليين: فالأحداث المتلاصقة
@@ -243,10 +238,6 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onVDr
       onTap?.(e.pointerType, e.clientX, e.clientY);
       return;
     }
-    if (d.axis === 'y') {
-      if (!scroll) onVDragEnd?.(e.type === 'pointerup' ? e.clientY - d.y : 0, e.timeStamp - d.t0);
-      return;
-    }
     if (d.axis !== 'x') return;
     const mx = e.clientX - d.x;
     const first = d.samples[0];
@@ -259,64 +250,6 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onVDr
     else if (mx < -box.w * TURN_RATIO || (flick && mx < 0)) dir = -1;
     settle(dir);
   };
-
-  // ---------- فتح الصفحات السفلية في وضع التمرير ----------
-  // السحب لأعلى يتعارض هنا مع تمرير الصفحة، فيعمل فقط إن كانت الصفحة مُمرَّرة إلى آخرها ثم
-  // زاد المستخدم سحبه (pull past the end)؛ وإلا فهو تمرير عادي. وتُرصد اللمسات بأحداث اللمس
-  // لأن المتصفح يلغي أحداث المؤشر (pointercancel) متى تولّى التمرير. وللحاسوب عجلة الفأرة بالمثل.
-  useEffect(() => {
-    const el = viewRef.current;
-    if (!scroll || !el) return undefined;
-    const atEnd = () => {
-      const s = el.querySelector('.sheet--current');
-      return !!s && s.scrollTop + s.clientHeight >= s.scrollHeight - 2;
-    };
-    let t = null;
-    const start = (e) => {
-      t = e.touches.length === 1 ? { y: e.touches[0].clientY, t0: e.timeStamp, pull: 0 } : null;
-    };
-    const move = (e) => {
-      if (!t || drag.current?.axis === 'x') return;
-      const y = e.touches[0].clientY;
-      const dy = y - t.y;
-      t.y = y;
-      if (dy < 0 && atEnd()) t.pull += -dy;
-      else if (dy > 0 && t.pull > 0) t.pull = Math.max(0, t.pull - dy);
-      if (t.pull > 0) onVDrag?.(-t.pull);
-    };
-    const end = (e) => {
-      if (t && t.pull > 0) onVDragEnd?.(-t.pull, Math.max(1, e.timeStamp - t.t0));
-      t = null;
-    };
-    let acc = 0;
-    let timer = 0;
-    const wheel = (e) => {
-      if (!atEnd() || e.deltaY <= 0) {
-        acc = 0;
-        return;
-      }
-      acc += e.deltaY;
-      onVDrag?.(-Math.min(acc, 400));
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        onVDragEnd?.(-acc, 400);
-        acc = 0;
-      }, 160);
-    };
-    el.addEventListener('touchstart', start, { passive: true });
-    el.addEventListener('touchmove', move, { passive: true });
-    el.addEventListener('touchend', end, { passive: true });
-    el.addEventListener('touchcancel', end, { passive: true });
-    el.addEventListener('wheel', wheel, { passive: true });
-    return () => {
-      clearTimeout(timer);
-      el.removeEventListener('touchstart', start);
-      el.removeEventListener('touchmove', move);
-      el.removeEventListener('touchend', end);
-      el.removeEventListener('touchcancel', end);
-      el.removeEventListener('wheel', wheel);
-    };
-  }, [scroll, onVDrag, onVDragEnd]);
 
   // ---------- لوحة المفاتيح (للحاسوب) ----------
   // السهم الأيسر للتالية كموضعها، والأيمن للسابقة؛ والمسافة وPageDown للتالية، وShift+المسافة
@@ -408,7 +341,7 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onVDr
     if (column) onColumn?.(column);
   }, [column, onColumn]);
   const slots = [base + step, base, base - step].filter((p) => p >= FIRST_PAGE && p <= LAST_PAGE);
-  // سهما التقليب بجانب الصفحة (أو الزوج) من الخارج، وعند ضيق الجانبين على حافة الشاشة
+  // سهما التقليب بجانب الزوج من الخارج، وعند ضيق الجانبين على حافة الشاشة
   const arrowAt = box ? Math.max(6, (box.w - column) / 2 - 56) : 0;
 
   return (
@@ -442,7 +375,7 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onVDr
           )}
         </div>
       )}
-      {area && !scroll && (
+      {area && spread && (
         <>
           <ArrowButton side="right" at={arrowAt} shown={arrows} disabled={!canTurn(-1)} onClick={() => settle(-1)} />
           <ArrowButton side="left" at={arrowAt} shown={arrows} disabled={!canTurn(1)} onClick={() => settle(1)} />

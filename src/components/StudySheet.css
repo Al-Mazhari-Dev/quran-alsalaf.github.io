@@ -1,4 +1,5 @@
-/* صفحة كاملة تحت صفحة المصحف: موضعها يضبطه App بالسحب (translateY)، وتبدأ تحت حافة الشاشة */
+/* صفحات المحتوى — في عرض الصفحة الواحدة صفحة كاملة تغطي الشاشة، تدخل من اليسار كالانتقال
+   إلى صفحة تالية (كصفحة الإعدادات) */
 .study {
   position: fixed;
   inset: 0;
@@ -7,8 +8,69 @@
   flex-direction: column;
   padding-top: var(--safe-top);
   background: var(--bg);
-  transform: translate3d(0, 100%, 0);
-  will-change: transform;
+  visibility: hidden;
+  transform: translate3d(-100%, 0, 0);
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.25, 1), visibility 0s linear 260ms;
+}
+
+.study--open {
+  visibility: visible;
+  transform: none;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.25, 1), visibility 0s;
+}
+
+/* الرأس: الرجوع (أو ✕ في اللوحة) والعنوان */
+.study__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+
+.study__head h2 {
+  flex: 1;
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.study__back,
+.study__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--ink);
+}
+
+.study__close {
+  width: 34px;
+  height: 34px;
+  background: var(--surface-2);
+}
+
+.study__back:active,
+.study__close:active {
+  background: var(--surface-2);
+}
+
+.study__back svg {
+  width: 22px;
+  height: 22px;
+}
+
+.study__close svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* تحديد مقدار صفحات المحتوى: فوق التبويبات مباشرة */
+.study__range {
+  flex: none;
+  padding: 0 14px 8px;
 }
 
 /* التبويبات: من اليمين تفسير ثم المعاني ثم العمل، والنشط بخط تحته ولون التمييز */
@@ -317,58 +379,39 @@
   color: var(--ink-faint);
 }
 
-/* ===== الإغلاق بالفأرة ===== */
-.study__close {
-  display: none;
-  flex: none;
-  place-items: center;
-  align-self: center;
-  width: 34px;
-  height: 34px;
-  margin-inline-start: 6px;
-  border-radius: 50%;
-  background: var(--surface-2);
-  color: var(--ink);
-}
-
-.study__close svg {
-  width: 18px;
-  height: 18px;
-}
-
-.study__close:hover {
-  background: var(--surface-3);
-}
-
 @media (hover: hover) and (pointer: fine) {
-  .study__close {
-    display: grid;
-  }
-
-  /* شريط التبويبات مقبض السحب بالفأرة */
-  .study__tabs {
-    cursor: grab;
-  }
-
-  .study__tabs:active {
-    cursor: grabbing;
+  .study__back:hover,
+  .study__close:hover {
+    background: var(--surface-3);
   }
 }
 
-/* ===== اللوحة المتمركزة (الشاشة الكبيرة: الصفحتان معًا) =====
+/* ===== اللوحة المتمركزة (عرض الصفحتين) =====
    فوق المصحف بعرض مريح للقراءة لا ممتدة على كل العرض، وما خلفها معتَّم (.study-backdrop في App.css) */
 .study--panel {
-  inset: calc(24px + var(--safe-top)) 0 0;
+  inset: calc(24px + var(--safe-top)) 0 24px;
   width: min(760px, calc(100% - 48px));
   margin-inline: auto;
   padding-top: 0;
   border: 1px solid var(--border);
-  border-bottom: 0;
-  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  border-radius: var(--r-xl);
   box-shadow: var(--shadow-float);
   overflow: hidden;
+  opacity: 0;
+  transform: translate3d(0, 32px, 0);
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.25, 1), opacity 200ms ease, visibility 0s linear 260ms;
 }
 
-.study--panel .study__close {
-  display: grid;
+.study--panel.study--open {
+  opacity: 1;
+  transform: none;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.25, 1), opacity 200ms ease, visibility 0s;
+}
+
+.study--panel .study__head {
+  padding: 12px 16px 8px;
+}
+
+.study--panel .study__range {
+  padding-inline: 16px;
 }

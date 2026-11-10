@@ -1,0 +1,77 @@
+.rbar {
+  display: grid;
+  gap: 6px;
+}
+
+.rbar__title {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.rbar__row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.rbar__pick {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  justify-items: start;
+  gap: 1px;
+  padding: 6px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-align: start;
+}
+
+.rbar__pick small {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.rbar__pick span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.rbar__pick:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rbar__pick:disabled span {
+  color: var(--ink-faint);
+}
+
+.rbar__clear {
+  flex: none;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.rbar__clear svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rbar__pick:not(:disabled):hover,
+  .rbar__clear:hover {
+    background: var(--surface-3);
+  }
+}

@@ -15,17 +15,20 @@ import {
 } from '../lib/study.js';
 import { copyText } from '../lib/userdata.js';
 import { useLayer } from '../lib/layers.js';
+import RangeBar from './RangeBar.jsx';
 import './StudySheet.css';
 
 /*
-  الصفحات السفلية (الفصل ٥): صفحة كاملة تحت صفحة المصحف، تصعد بسحب المصحف إلى أعلى
-  وتنزل بسحبها إلى أسفل — انزلاقًا رأسيًّا يتبع الإصبع كتمرير «يوتيوب شورتس»
-  (يتحكم في الانزلاق App، وهذه تُبلغه بسحبة الإغلاق عبر onDrag/onDragEnd).
-  ثلاثة تبويبات ثابتة من اليمين: تفسير · معاني الكلمات · العمل بالآيات، يُنتقل بينها باللمس
-  أو بالسحب يمينًا ويسارًا (كتقليب المصحف: السحب نحو اليمين إلى التبويب الذي على اليسار)،
-  (و«فوائد الآيات» تبويبٌ يُضاف لاحقًا إن طُلب — لا يظهر الآن). والنطاق المحدد إن وُجد، وإلا
-  آيات الصفحة الحالية؛ و«من فوائد الآيات» لصفحات النطاق. وفي كل تبويب زرّا نسخ: المحتوى
-  وحده متتاليًا، والآيات وحدها.
+  صفحات المحتوى (الفصل ٥، وبهذا الاسم منذ ٢٠٢٦-١١-١٠): تفسير · معاني الكلمات · العمل بالآيات.
+  تُفتح بزرّ «صفحات المحتوى» في الشريط السفلي وحده (لا بالسحب):
+  • في عرض الصفحة الواحدة («نسخة الجوال»): صفحة كاملة تغطي الشاشة، تُغلق بزرّ الرجوع في
+    أولها وبزرّ الرجوع في أندرويد (يتولّاه App بسجل المتصفح).
+  • في عرض الصفحتين («نسخة اللابتوب»): لوحة متمركزة فوق المصحف، تُغلق بـ✕ وEsc والنقر خارجها.
+  وفوق التبويبات شريط «تحديد مقدار الآيات» خاص بصفحات المحتوى (مستقل عن مقدار الاستماع)؛
+  وإن لم يُحدَّد فالمحتوى لآيات الصفحة الظاهرة أو الصفحتين الظاهرتين.
+  والتبويبات ثلاثة ثابتة من اليمين، يُنتقل بينها باللمس أو بالسحب يمينًا ويسارًا (كتقليب
+  المصحف: السحب نحو اليمين إلى التبويب الذي على اليسار). و«من فوائد الآيات» لصفحات النطاق،
+  وفي كل تبويب زرّا نسخ: المحتوى وحده متتاليًا، والآيات وحدها.
 */
 const TABS = [
   { id: 'tafsir', name: 'تفسير' },
@@ -41,13 +44,17 @@ export const UNAVAILABLE =
 export const NO_MEANINGS = 'لا توجد معاني كلمات ذُكرت في هذه الآية';
 export const NO_ACTIONS = 'لا يوجد عمل بالآيات ذُكر في هذه الآية';
 
-// panel: لوحة متمركزة فوق المصحف (الشاشة الكبيرة) بدل صفحة كاملة. onClose: الإغلاق بزرّ ✕ وبمفتاح Esc
-const StudySheet = forwardRef(function StudySheet({ open, panel, onClose, onDrag, onDragEnd, onToast, quran, verses, pages }, ref) {
+// panel: لوحة متمركزة (نسخة اللابتوب) بدل صفحة كاملة. onClose: الإغلاق بزرّه وبمفتاح Esc.
+// range / onPickStart / onPickEnd / onClearRange: مقدار صفحات المحتوى (RangeBar)
+const StudySheet = forwardRef(function StudySheet(
+  { open, panel, onClose, onToast, quran, verses, pages, range, onPickStart, onPickEnd, onClearRange },
+  ref
+) {
   const [tab, setTab] = useState('tafsir');
   const [slide, setSlide] = useState(0); // اتجاه آخر انتقال بين التبويبات، لحركة المحتوى
   const bodyRef = useRef(null);
-  const handlers = useRef({});
-  handlers.current = { onDrag, onDragEnd, tab };
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
   useLayer(onClose, open);
 
   useEffect(() => {
@@ -55,7 +62,7 @@ const StudySheet = forwardRef(function StudySheet({ open, panel, onClose, onDrag
   }, [tab, verses, open]);
 
   const goTab = (id) => {
-    const from = ACTIVE_TABS.indexOf(handlers.current.tab);
+    const from = ACTIVE_TABS.indexOf(tabRef.current);
     const to = ACTIVE_TABS.indexOf(id);
     if (to < 0 || to === from) return;
     setSlide(to > from ? 1 : -1);
@@ -64,88 +71,41 @@ const StudySheet = forwardRef(function StudySheet({ open, panel, onClose, onDrag
   const goTabRef = useRef(goTab);
   goTabRef.current = goTab;
 
-  // السحب داخل الصفحة: رأسيًّا إلى أسفل (والمحتوى في أوله) يُنزلها إلى المصحف،
-  // وأفقيًّا ينتقل بين التبويبات. وما سوى ذلك تمرير عادي للمحتوى.
+  // السحب الأفقي باللمس ينتقل بين التبويبات، وما سواه تمرير عادي للمحتوى
   useEffect(() => {
     const root = ref.current;
-    const body = bodyRef.current;
     if (!root) return undefined;
     let s = null;
     const onStart = (e) => {
-      if (e.target.closest('input')) return;
+      if (e.target.closest('input, .rbar')) return;
       const t = e.touches[0];
-      s = { x: t.clientX, y: t.clientY, t0: e.timeStamp, axis: null, atTop: !body.contains(e.target) || body.scrollTop <= 0, dx: 0, dy: 0 };
+      s = { x: t.clientX, y: t.clientY, axis: null, dx: 0 };
     };
     const onMove = (e) => {
       if (!s) return;
       const t = e.touches[0];
       s.dx = t.clientX - s.x;
-      s.dy = t.clientY - s.y;
+      const dy = t.clientY - s.y;
       if (!s.axis) {
-        if (Math.max(Math.abs(s.dx), Math.abs(s.dy)) < 10) return;
-        if (Math.abs(s.dx) > Math.abs(s.dy)) s.axis = 'x';
-        else s.axis = s.dy > 0 && s.atTop ? 'y' : 'scroll';
+        if (Math.max(Math.abs(s.dx), Math.abs(dy)) < 10) return;
+        s.axis = Math.abs(s.dx) > Math.abs(dy) ? 'x' : 'scroll';
       }
-      if (s.axis === 'y') {
-        e.preventDefault();
-        handlers.current.onDrag?.(Math.max(0, s.dy));
-      } else if (s.axis === 'x') e.preventDefault();
+      if (s.axis === 'x') e.preventDefault();
     };
-    const onEnd = (e) => {
+    const onEnd = () => {
       if (!s) return;
-      const { axis, dx, dy, t0 } = s;
+      const { axis, dx } = s;
       s = null;
-      if (axis === 'y') handlers.current.onDragEnd?.(Math.max(0, dy), e.timeStamp - t0);
-      else if (axis === 'x' && Math.abs(dx) > TAB_SWIPE_PX) {
-        const i = ACTIVE_TABS.indexOf(handlers.current.tab) + (dx > 0 ? 1 : -1);
+      if (axis === 'x' && Math.abs(dx) > TAB_SWIPE_PX) {
+        const i = ACTIVE_TABS.indexOf(tabRef.current) + (dx > 0 ? 1 : -1);
         if (i >= 0 && i < ACTIVE_TABS.length) goTabRef.current(ACTIVE_TABS[i]);
       }
     };
-    // السحب بالفأرة كما يُسحب بالإصبع: إلى أسفل من شريط التبويبات (لا من المحتوى، ففيه
-    // تحديد النص)، فتنزل الصفحة مع المؤشر وتُغلق إن جاوز السحب حدّه. والنقر بلا سحب يبقى نقرًا
-    let m = null;
-    const onPDown = (e) => {
-      if (e.pointerType !== 'mouse' || e.button !== 0 || body.contains(e.target)) return;
-      m = { id: e.pointerId, y: e.clientY, t0: e.timeStamp, dragging: false };
-    };
-    const onPMove = (e) => {
-      if (!m || m.id !== e.pointerId) return;
-      const dy = e.clientY - m.y;
-      if (!m.dragging) {
-        if (dy < 8) return;
-        m.dragging = true;
-        try {
-          root.setPointerCapture(e.pointerId);
-        } catch {
-          // لا يلزم للسحب
-        }
-      }
-      handlers.current.onDrag?.(Math.max(0, dy));
-    };
-    const onPUp = (e) => {
-      if (!m || m.id !== e.pointerId) return;
-      const { dragging, y, t0 } = m;
-      m = null;
-      if (!dragging) return;
-      handlers.current.onDragEnd?.(e.type === 'pointerup' ? Math.max(0, e.clientY - y) : 0, e.timeStamp - t0);
-      // النقرة التي تلي السحب لا تُعدّ ضغطًا على تبويب
-      const stop = (ev) => ev.stopPropagation();
-      root.addEventListener('click', stop, { capture: true, once: true });
-      setTimeout(() => root.removeEventListener('click', stop, { capture: true }), 0);
-    };
-    root.addEventListener('pointerdown', onPDown);
-    root.addEventListener('pointermove', onPMove);
-    root.addEventListener('pointerup', onPUp);
-    root.addEventListener('pointercancel', onPUp);
     root.addEventListener('touchstart', onStart, { passive: true });
     root.addEventListener('touchmove', onMove, { passive: false });
     root.addEventListener('touchend', onEnd);
     root.addEventListener('touchcancel', onEnd);
     return () => {
-      root.removeEventListener('pointerdown', onPDown);
-      root.removeEventListener('pointermove', onPMove);
-      root.removeEventListener('pointerup', onPUp);
-      root.removeEventListener('pointercancel', onPUp);
       root.removeEventListener('touchstart', onStart);
       root.removeEventListener('touchmove', onMove);
       root.removeEventListener('touchend', onEnd);
@@ -156,12 +116,36 @@ const StudySheet = forwardRef(function StudySheet({ open, panel, onClose, onDrag
   return (
     <section
       ref={ref}
-      className={`study${panel ? ' study--panel' : ''}`}
+      className={`study${panel ? ' study--panel' : ''}${open ? ' study--open' : ''}`}
       aria-hidden={!open}
       inert={open ? undefined : ''}
       role="dialog"
-      aria-label="التفسير والمعاني والعمل"
+      aria-modal="true"
+      aria-label="صفحات المحتوى"
     >
+      {/* في الصفحة الكاملة: سهم الرجوع في أولها (يمينًا) كصفحة الإعدادات. وفي اللوحة: ✕ في آخرها */}
+      <header className="study__head">
+        {!panel && (
+          <button type="button" className="study__back" onClick={onClose} aria-label="رجوع">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
+        <h2>صفحات المحتوى</h2>
+        {panel && (
+          <button type="button" className="study__close" onClick={onClose} aria-label="إغلاق">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
+      </header>
+
+      <div className="study__range">
+        <RangeBar quran={quran} range={range} onPickStart={onPickStart} onPickEnd={onPickEnd} onClear={onClearRange} />
+      </div>
+
       <nav className="study__tabs" role="tablist">
         {TABS.map((t) => (
           <button
@@ -175,13 +159,6 @@ const StudySheet = forwardRef(function StudySheet({ open, panel, onClose, onDrag
             {t.name}
           </button>
         ))}
-        {/* زرّ الإغلاق: على الأجهزة التي تعمل بالفأرة وفي اللوحة (StudySheet.css)، وعلى الجوال
-            باللمس يبقى الإغلاق بالسحب كما كان */}
-        <button type="button" className="study__close" onClick={onClose} aria-label="إغلاق">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-        </button>
       </nav>
 
       <div className="study__body" ref={bodyRef}>
