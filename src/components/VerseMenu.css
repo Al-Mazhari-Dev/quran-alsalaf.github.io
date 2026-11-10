@@ -235,3 +235,35 @@
     opacity: 0;
   }
 }
+
+/* زرّ إغلاق البطاقة الصغيرة: على أجهزة الفأرة وحدها */
+.vmenu__x {
+  display: none;
+  align-self: center;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.vmenu__x svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .vmenu__x {
+    display: grid;
+  }
+
+  .vmenu__picker {
+    width: min(390px, calc(100% - 24px));
+  }
+
+  .vmenu__action:hover {
+    background: var(--surface-2);
+  }
+}

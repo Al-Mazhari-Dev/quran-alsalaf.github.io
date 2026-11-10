@@ -63,3 +63,41 @@ export function pageLayout(quran, page, area, scroll = false) {
   }
   return { ...size, shortLines: shortLinesOf(quran, page) };
 }
+
+// ===== الصفحتان جنبًا إلى جنب (الشاشات الكبيرة، ٢٠٢٦-١١-١٠) =====
+// يحدده حجم المساحة المتاحة لا اتجاه الشاشة: تُعرض الصفحتان معًا متى اتسع العرض والارتفاع
+// لهما بخط مقروء وبالأسطر الخمسة عشر كاملة بلا تمرير، وإلا بقيت الصفحة الواحدة.
+//
+// العتبة (بالتجربة على ١٣٦٦×٧٦٨ و١٤٤٠×٩٠٠ و١٩٢٠×١٠٨٠ وتصغير النافذة):
+//  • خط الصفحتين لا يقل عن SPREAD_MIN_FONT بكسل — وعلى ١٣٦٦×٧٦٨ داخل المتصفح (نحو ٦٥٠ ارتفاعًا)
+//    يبلغ نحو ٢٠ بكسل، فيُعرض الزوج؛ وما دون ذلك (ارتفاع أقل من نحو ٥٨٠) صفحة واحدة.
+//  • ولا يصغر عن خط الصفحة الواحدة في المساحة نفسها بأكثر من SPREAD_MIN_RATIO: فلا تُقسم شاشة
+//    طولية (كاللوح الرأسي أو نافذة ضيقة) صفحتين صغيرتين، ويكون الزوج في الشاشات العريضة بالخط نفسه.
+//  • ولا يُجمع مع وضع التمرير (الجوال الأفقي)، فيبقى الجوال كما هو.
+export const SPREAD_MIN_FONT = 18;
+export const SPREAD_MIN_RATIO = 0.9;
+// المسافة بين الصفحتين (كعب الكتاب)، والهامش الخارجي على كل جانب (يتسع لسهمي التقليب)
+export const SPREAD_GUTTER = 36;
+export const SPREAD_SIDE = 56;
+
+function fontFor(quran, area) {
+  return Math.floor(Math.min((area.w * SAFETY) / quran.qcf.widest, area.h / 15 / LINE_EM) * 100) / 100;
+}
+
+// مساحة أسطر صفحة واحدة من الزوج، من مساحة القارئ كلها (box) وارتفاع الترويسة
+export function spreadArea(box, metaH) {
+  return { w: Math.floor((box.w - SPREAD_GUTTER - SPREAD_SIDE * 2) / 2), h: box.h - metaH };
+}
+
+// box: مساحة القارئ كلها. singleArea: مساحة أسطر الصفحة الواحدة فيها
+export function isSpreadMode(quran, box, singleArea, metaH) {
+  if (!box || !quran || isScrollMode(box)) return false;
+  const area = spreadArea(box, metaH);
+  if (area.w <= 0 || area.h <= 0) return false;
+  const two = fontFor(quran, area);
+  const one = fontFor(quran, singleArea);
+  return two >= SPREAD_MIN_FONT && two >= one * SPREAD_MIN_RATIO;
+}
+
+// رقم الصفحة اليمنى (الفردية) من الزوج الذي فيه الصفحة: ١–٢، ٣–٤، … ٦٠٣–٦٠٤
+export const spreadStart = (page) => (page % 2 ? page : page - 1);

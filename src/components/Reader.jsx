@@ -3,7 +3,8 @@ import { flushSync } from 'react-dom';
 import MushafPage from './MushafPage.jsx';
 import { pageInfo, toArabicDigits } from '../data/quran.js';
 import { SURA_NAMES_VOWELED } from '../data/suraNamesVoweled.js';
-import { isScrollMode, pageLayout } from '../lib/layout.js';
+import { SPREAD_GUTTER, isScrollMode, isSpreadMode, pageLayout, spreadArea, spreadStart } from '../lib/layout.js';
+import { hasOpenLayer } from '../lib/layers.js';
 import { prefetchPageFonts, usePageFont } from '../lib/qcfFonts.js';
 import { FIRST_PAGE, LAST_PAGE, readLastPage, saveLastPage } from '../lib/position.js';
 import './Reader.css';
@@ -15,7 +16,12 @@ import './Reader.css';
   الحالية، فللتقدّم يُحرَّك الإصبع من اليسار نحو اليمين فتدخل التالية من اليسار.
   وبالعكس للسابقة.
 
-  تُرسم ثلاث صفحات متجاورة (السابقة والحالية والتالية) على شريط واحد يتحرك مع
+  وفي الشاشات الكبيرة (٢٠٢٦-١١-١٠) تُعرض صفحتان متقابلتان كالمصحف المفتوح: الفردية يمينًا
+  والزوجية يسارًا (١–٢، ٣–٤، … ٦٠٣–٦٠٤)، ويُقلَّب زوجًا كاملًا. ومتى يُعرض الزوج يحدده
+  حجم المساحة (src/lib/layout.js). وحالة الصفحة رقمُ صفحة واحدة دائمًا (آخر موضع)، فإذا
+  ضاقت النافذة عاد عرض الصفحة الواحدة على الصفحة نفسها.
+
+  تُرسم ثلاث صفحات (أو ثلاثة أزواج) متجاورة (السابقة والحالية والتالية) على شريط واحد يتحرك مع
   الإصبع، فتظهر الصفحة المجاورة أثناء السحب لا بعده. والشريط يُحرَّك مباشرة
   في DOM لا عبر حالة React، لتبقى الحركة سلسة ٦٠ إطارًا في الثانية.
 */
@@ -43,17 +49,25 @@ const TAP_MS = 350;
 const LONG_PRESS_MS = 450;
 
 // onColumn: يُبلَّغ به عرض عمود الأسطر، ليُحاذى به الشريط العلوي فوقه
-// onPage: يُبلَّغ بالصفحة الحالية (نطاق الصفحات السفلية)
-// onVDrag / onVDragEnd: السحب الرأسي أثناءه وعند رفع الإصبع (المسافة، والمدة) — به تصعد
-// الصفحات السفلية مع الإصبع (الفصل ٥)
+// onPage: يُبلَّغ بالصفحة الحالية (نطاق صفحات المحتوى والاستماع)
+// (صفحات المحتوى لا تُفتح بالسحب منذ ٢٠٢٦-١١-١٠: بزرّها في الشريط السفلي وحده)
 // onLongPress(آية، مستطيل كلمتها): ضغط مطوّل على آية
 // goto { page, n }: انتقال إلى صفحة بطلب من خارج القارئ (كاختيار آية من قائمة النطاق)
 // marks: إشارات بيانات المستخدم على الآيات (MushafPage)
-export default function Reader({ quran, onTap, onColumn, onPage, onVDrag, onVDragEnd, onLongPress, goto, marks }) {
+// onSpread(bool): يُبلَّغ به هل تُعرض الصفحتان معًا
+// arrows: إظهار سهمي التقليب على جانبي الزوج (عند تحريك الفأرة) — في عرض الصفحتين وحده
+export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLongPress, goto, marks, arrows }) {
   const [page, setPage] = useState(readLastPage);
   const [box, setBox] = useState(null);
   // الجوال الأفقي (٢٠٢٦-١٠-١٧): تملأ الصفحةُ العرضَ وتُمرَّر رأسيًّا داخل نفسها (src/lib/layout.js)
   const scroll = isScrollMode(box);
+  const area = box && { w: box.w - PAD_X * 2, h: box.h - META_H };
+  const spread = isSpreadMode(quran, box, area, META_H);
+  // وحدة التقليب: صفحة، أو زوج يبدأ بالصفحة الفردية
+  const step = spread ? 2 : 1;
+  const base = spread ? spreadStart(page) : page;
+  const stepRef = useRef(step);
+  stepRef.current = step;
 
   useEffect(() => {
     if (goto?.page) setPage(goto.page);
@@ -89,7 +103,14 @@ export default function Reader({ quran, onTap, onColumn, onPage, onVDrag, onVDra
     onPage?.(page);
   }, [page, onPage]);
   // الصفحتان المجاورتان تُرسمان على الشريط فيُنزَّل خطّاهما معهما، ويُنزَّل ما بعدهما مسبقًا
-  useEffect(() => prefetchPageFonts([page + 2, page - 2]), [page]);
+  // وفي الزوج: الزوجان المجاوران يُرسمان، ويُنزَّل خطّا ما بعدهما مسبقًا
+  useEffect(
+    () => prefetchPageFonts(spread ? [base + 4, base + 5, base - 4, base - 3] : [page + 2, page - 2]),
+    [page, base, spread]
+  );
+  useEffect(() => {
+    onSpread?.(spread);
+  }, [spread, onSpread]);
   useEffect(() => () => clearTimeout(fallback.current), []);
 
   const moveTrack = useCallback((x, animate) => {
@@ -102,9 +123,14 @@ export default function Reader({ quran, onTap, onColumn, onPage, onVDrag, onVDra
 
   // بعد تبدّل الصفحة يعود الشريط إلى موضعه قبل أن يُرسم الإطار التالي،
   // فتحلّ الصفحة الجديدة محلّ المجاورة بلا وميض
-  useLayoutEffect(() => moveTrack(0, false), [page, box, moveTrack]);
+  useLayoutEffect(() => moveTrack(0, false), [base, box, spread, moveTrack]);
 
-  const canTurn = (dir) => (dir > 0 ? page < LAST_PAGE : page > FIRST_PAGE);
+  const canTurn = (dir) => (dir > 0 ? base + step <= LAST_PAGE : base - step >= FIRST_PAGE);
+  // في الزوج يُنتقل من صفحته اليمنى إلى يمنى الزوج المجاور
+  const turned = (p, d) => {
+    const s = stepRef.current;
+    return Math.min(LAST_PAGE, Math.max(FIRST_PAGE, (s === 2 ? spreadStart(p) : p) + d * s));
+  };
 
   // dir: ‎+1 التالية (الشريط يتحرك يمينًا)، ‎-1 السابقة، ‎0 العودة إلى الموضع
   const settle = useCallback(
@@ -123,7 +149,7 @@ export default function Reader({ quran, onTap, onColumn, onPage, onVDrag, onVDra
       fallback.current = setTimeout(finish, TURN_MS + 120);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [box, page, moveTrack]
+    [box, page, step, moveTrack]
   );
 
   // تُستدعى مرة عند انتهاء الحركة، وقد تُستدعى ثانية من المؤقت الاحتياطي فلا تفعل شيئًا
@@ -132,7 +158,7 @@ export default function Reader({ quran, onTap, onColumn, onPage, onVDrag, onVDra
     animating.current = false;
     const d = pendingDir.current;
     pendingDir.current = 0;
-    if (d) setPage((p) => p + d);
+    if (d) setPage((p) => turned(p, d));
   }
 
   const onTransitionEnd = (e) => {
@@ -148,7 +174,7 @@ export default function Reader({ quran, onTap, onColumn, onPage, onVDrag, onVDra
     animating.current = false;
     const d = pendingDir.current;
     pendingDir.current = 0;
-    if (d) flushSync(() => setPage((p) => p + d));
+    if (d) flushSync(() => setPage((p) => turned(p, d)));
     else moveTrack(0, false); // كانت عودةً إلى الموضع (سحبة لم تكتمل): تتوقف
   }
 
@@ -188,11 +214,7 @@ export default function Reader({ quran, onTap, onColumn, onPage, onVDrag, onVDra
         }
       }
     }
-    if (d.axis === 'y') {
-      // في وضع التمرير يتولّى المتصفح السحب الرأسي (تمريرًا)، وفتح الصفحات السفلية له طريقه أدناه
-      if (!scroll) onVDrag?.(my);
-      return;
-    }
+    // السحب الرأسي لا يفعل شيئًا (وفي وضع التمرير يتولّاه المتصفح تمريرًا)
     if (d.axis !== 'x') return;
 
     // السرعة تُحسب على آخر ١٠٠ مللي ثانية لا بين حدثين متتاليين: فالأحداث المتلاصقة
@@ -213,11 +235,7 @@ export default function Reader({ quran, onTap, onColumn, onPage, onVDrag, onVDra
     if (d.longPressed) return;
     // لم يتحرك الإصبع (أقل من ٨ بكسل) ورُفع سريعًا: لمسة لا سحبة
     if (!d.axis && e.type === 'pointerup' && e.timeStamp - d.t0 < TAP_MS) {
-      onTap?.();
-      return;
-    }
-    if (d.axis === 'y') {
-      if (!scroll) onVDragEnd?.(e.type === 'pointerup' ? e.clientY - d.y : 0, e.timeStamp - d.t0);
+      onTap?.(e.pointerType, e.clientX, e.clientY);
       return;
     }
     if (d.axis !== 'x') return;
@@ -233,82 +251,98 @@ export default function Reader({ quran, onTap, onColumn, onPage, onVDrag, onVDra
     settle(dir);
   };
 
-  // ---------- فتح الصفحات السفلية في وضع التمرير ----------
-  // السحب لأعلى يتعارض هنا مع تمرير الصفحة، فيعمل فقط إن كانت الصفحة مُمرَّرة إلى آخرها ثم
-  // زاد المستخدم سحبه (pull past the end)؛ وإلا فهو تمرير عادي. وتُرصد اللمسات بأحداث اللمس
-  // لأن المتصفح يلغي أحداث المؤشر (pointercancel) متى تولّى التمرير. وللحاسوب عجلة الفأرة بالمثل.
-  useEffect(() => {
-    const el = viewRef.current;
-    if (!scroll || !el) return undefined;
-    const atEnd = () => {
-      const s = el.querySelector('.sheet--current');
-      return !!s && s.scrollTop + s.clientHeight >= s.scrollHeight - 2;
-    };
-    let t = null;
-    const start = (e) => {
-      t = e.touches.length === 1 ? { y: e.touches[0].clientY, t0: e.timeStamp, pull: 0 } : null;
-    };
-    const move = (e) => {
-      if (!t || drag.current?.axis === 'x') return;
-      const y = e.touches[0].clientY;
-      const dy = y - t.y;
-      t.y = y;
-      if (dy < 0 && atEnd()) t.pull += -dy;
-      else if (dy > 0 && t.pull > 0) t.pull = Math.max(0, t.pull - dy);
-      if (t.pull > 0) onVDrag?.(-t.pull);
-    };
-    const end = (e) => {
-      if (t && t.pull > 0) onVDragEnd?.(-t.pull, Math.max(1, e.timeStamp - t.t0));
-      t = null;
-    };
-    let acc = 0;
-    let timer = 0;
-    const wheel = (e) => {
-      if (!atEnd() || e.deltaY <= 0) {
-        acc = 0;
-        return;
-      }
-      acc += e.deltaY;
-      onVDrag?.(-Math.min(acc, 400));
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        onVDragEnd?.(-acc, 400);
-        acc = 0;
-      }, 160);
-    };
-    el.addEventListener('touchstart', start, { passive: true });
-    el.addEventListener('touchmove', move, { passive: true });
-    el.addEventListener('touchend', end, { passive: true });
-    el.addEventListener('touchcancel', end, { passive: true });
-    el.addEventListener('wheel', wheel, { passive: true });
-    return () => {
-      clearTimeout(timer);
-      el.removeEventListener('touchstart', start);
-      el.removeEventListener('touchmove', move);
-      el.removeEventListener('touchend', end);
-      el.removeEventListener('touchcancel', end);
-      el.removeEventListener('wheel', wheel);
-    };
-  }, [scroll, onVDrag, onVDragEnd]);
-
-  // ---------- لوحة المفاتيح (للحاسوب): السهم الأيسر للتالية كموضعها ----------
+  // ---------- لوحة المفاتيح (للحاسوب) ----------
+  // السهم الأيسر للتالية كموضعها، والأيمن للسابقة؛ والمسافة وPageDown للتالية، وShift+المسافة
+  // وPageUp للسابقة. ولا تعمل والمصحف مغطّى بقائمة أو صفحة، ولا أثناء الكتابة في خانة.
+  // ومع الضغط المستمر تُتمّ القلبة الجارية فورًا فيُقلَّب متتابعًا.
+  const api = useRef(null);
+  api.current = { settle, canTurn, moveTrack, completeNow, w: box?.w ?? 0 };
   useEffect(() => {
     const onKey = (e) => {
-      if (animating.current || drag.current) return;
-      if (e.key === 'ArrowLeft') settle(1);
-      else if (e.key === 'ArrowRight') settle(-1);
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || hasOpenLayer()) return;
+      const t = e.target;
+      if (t?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      let dir = 0;
+      if (e.key === 'ArrowLeft' || e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) dir = 1;
+      else if (e.key === 'ArrowRight' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) dir = -1;
+      if (!dir) return;
+      // المسافة على زرّ مركَّز تضغطه، فتُترك له
+      if (e.key === ' ' && t?.closest?.('button, a, [role="button"]')) return;
+      e.preventDefault();
+      if (drag.current) return;
+      if (animating.current) api.current.completeNow();
+      api.current.settle(dir);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [settle]);
+  }, []);
 
-  const area = box && { w: box.w - PAD_X * 2, h: box.h - META_H };
-  // عرض العمود واحد لكل الصفحات (حجم الخط واحد)، فيكفي أخذه من الصفحة الحالية
-  const column = area ? pageLayout(quran, page, area, scroll).width : 0;
+  // ---------- السحب بلوحة اللمس (عجلة أفقية) ----------
+  // سحب إصبعين أفقيًّا على لوحة لمس الحاسوب يصل أحداثَ عجلة لا أحداث مؤشر: تتبعه الصفحة
+  // كالسحب بالإصبع، وتُقلب إن تجاوز السحب حدّه أو توقف بعد مسافة كافية، وإلا عادت.
+  // واتجاهه كالإصبع: حركة الإصبعين نحو اليمين للتالية. وما بقي من قصور الحركة بعد القلب يُهمَل.
+  useEffect(() => {
+    const el = viewRef.current;
+    if (!el) return undefined;
+    let acc = 0;
+    let idle = 0;
+    let locked = false;
+    const onWheel = (e) => {
+      if (!acc && Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      if (hasOpenLayer() || drag.current) return;
+      e.preventDefault(); // لا رجوع في سجل المتصفح بسحب الإصبعين
+      clearTimeout(idle);
+      if (locked) {
+        idle = setTimeout(() => (locked = false), 220);
+        return;
+      }
+      const A = api.current;
+      if (animating.current) A.completeNow();
+      acc -= e.deltaX * (e.deltaMode === 1 ? 16 : 1);
+      const dir = acc > 0 ? 1 : -1;
+      const x = Math.max(-A.w, Math.min(A.w, acc));
+      A.moveTrack(A.canTurn(dir) ? x : x * EDGE_RESISTANCE, false);
+      if (Math.abs(acc) > A.w * TURN_RATIO) {
+        acc = 0;
+        locked = true;
+        A.settle(dir);
+        idle = setTimeout(() => (locked = false), 220);
+        return;
+      }
+      idle = setTimeout(() => {
+        const a = acc;
+        acc = 0;
+        api.current.settle(Math.abs(a) > FLICK_MIN_PX ? Math.sign(a) : 0);
+      }, 140);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      clearTimeout(idle);
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, []);
+
+  // ---------- الزرّ الأيمن على آية: يفتح بطاقتها كالضغط المطوّل ----------
+  const onContextMenu = (e) => {
+    e.preventDefault();
+    const word = e.target.closest?.('.w[data-v]');
+    if (!word || !onLongPress) return;
+    if (drag.current) clearTimeout(drag.current.press);
+    drag.current = null;
+    onLongPress(+word.dataset.v, word.getBoundingClientRect());
+  };
+
+  const half = spread ? spreadArea(box, META_H) : null;
+  // عرض العمود واحد لكل الصفحات (حجم الخط واحد)، فيكفي أخذه من الصفحة الحالية.
+  // وفي الزوج: عرض الصفحتين وما بينهما
+  const single = area ? pageLayout(quran, page, spread ? half : area, scroll).width : 0;
+  const column = spread ? single * 2 + SPREAD_GUTTER : single;
   useEffect(() => {
     if (column) onColumn?.(column);
   }, [column, onColumn]);
-  const slots = [page + 1, page, page - 1].filter((p) => p >= FIRST_PAGE && p <= LAST_PAGE);
+  const slots = [base + step, base, base - step].filter((p) => p >= FIRST_PAGE && p <= LAST_PAGE);
+  // سهما التقليب بجانب الزوج من الخارج، وعند ضيق الجانبين على حافة الشاشة
+  const arrowAt = box ? Math.max(6, (box.w - column) / 2 - 56) : 0;
 
   return (
     <div
@@ -319,38 +353,89 @@ export default function Reader({ quran, onTap, onColumn, onPage, onVDrag, onVDra
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={onContextMenu}
     >
       {area && (
         <div ref={trackRef} className="reader__track" onTransitionEnd={onTransitionEnd}>
-          {slots.map((p) => (
-            <Sheet
-              key={p}
-              quran={quran}
-              page={p}
-              layout={pageLayout(quran, p, area, scroll)}
-              scroll={scroll}
-              shift={page - p}
-              current={p === page}
-              marks={marks}
-            />
-          ))}
+          {slots.map((p) =>
+            spread ? (
+              <Spread key={`s${p}`} quran={quran} start={p} area={half} shift={(base - p) / 2} current={p === base} marks={marks} />
+            ) : (
+              <Sheet
+                key={p}
+                quran={quran}
+                page={p}
+                layout={pageLayout(quran, p, area, scroll)}
+                scroll={scroll}
+                shift={page - p}
+                current={p === page}
+                marks={marks}
+              />
+            )
+          )}
         </div>
       )}
+      {area && spread && (
+        <>
+          <ArrowButton side="right" at={arrowAt} shown={arrows} disabled={!canTurn(-1)} onClick={() => settle(-1)} />
+          <ArrowButton side="left" at={arrowAt} shown={arrows} disabled={!canTurn(1)} onClick={() => settle(1)} />
+        </>
+      )}
+    </div>
+  );
+}
+
+// سهم تقليب على جانب المصحف (للفأرة): الأيسر للتالية والأيمن للسابقة، كاتجاه المصحف.
+// يظهر مع الأزرار العائمة عند تحريك الفأرة، ولا يبدأ سحبًا ولا لمسة على الصفحة
+function ArrowButton({ side, at, shown, disabled, onClick }) {
+  const next = side === 'left';
+  return (
+    <button
+      type="button"
+      className={`reader__arrow reader__arrow--${side}${shown && !disabled ? ' reader__arrow--shown' : ''}`}
+      style={{ [side]: `${at}px` }}
+      aria-label={next ? 'الصفحة التالية' : 'الصفحة السابقة'}
+      tabIndex={shown ? 0 : -1}
+      aria-hidden={!shown}
+      disabled={disabled}
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onClick={onClick}
+    >
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d={next ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  );
+}
+
+// زوج متقابل كالمصحف المفتوح: الفردية يمينًا والزوجية يسارًا، وبينهما كعب خفيف.
+// يُنتظر خطّا الصفحتين معًا قبل رسم أيٍّ منهما، فلا تظهر صفحة قبل أختها.
+function Spread({ quran, start, area, shift, current, marks }) {
+  const right = usePageFont(start);
+  const left = usePageFont(start + 1);
+  const font = right === 'ready' && left === 'ready' ? 'ready' : right === 'failed' || left === 'failed' ? 'failed' : 'loading';
+  return (
+    <div className="spread" style={{ transform: `translate3d(${shift * 100}%, 0, 0)` }} aria-hidden={!current}>
+      <Sheet quran={quran} page={start} layout={pageLayout(quran, start, area)} half font={font} current={current} marks={marks} />
+      <div className="spread__spine" aria-hidden="true" />
+      <Sheet quran={quran} page={start + 1} layout={pageLayout(quran, start + 1, area)} half font={font} current={current} marks={marks} />
     </div>
   );
 }
 
 // ورقة الصفحة: الترويسة فوق الأسطر — الجزء يمينًا، ورقم الصفحة في الوسط، والسورة يسارًا.
 // والترويسة جزء من الورقة، فتتحرك معها عند السحب.
-function Sheet({ quran, page, layout, scroll, shift, current, marks }) {
+// half: صفحة من زوج (موضعها في الزوج لا في الشريط)، وfont حال خطّي الزوج معًا
+function Sheet({ quran, page, layout, scroll, shift, current, marks, half, font: pairFont }) {
   const { sura, juz } = pageInfo(quran, page);
-  const font = usePageFont(page);
+  const own = usePageFont(page);
+  const font = pairFont ?? own;
   return (
     <section
-      className={`sheet${scroll ? ' sheet--scroll' : ''}${current ? ' sheet--current' : ''}`}
-      style={{ transform: `translate3d(${shift * 100}%, 0, 0)` }}
-      aria-hidden={!current}
+      className={`sheet${scroll ? ' sheet--scroll' : ''}${half ? ' sheet--half' : ''}${current ? ' sheet--current' : ''}`}
+      style={half ? { width: `${layout.width}px` } : { transform: `translate3d(${shift * 100}%, 0, 0)` }}
+      aria-hidden={half ? undefined : !current}
       aria-label={`الصفحة ${toArabicDigits(page)}`}
     >
       {/* بعرض عمود الأسطر نفسه: الجزء عند حافة الآيات اليمنى، والسورة عند حافتها اليسرى */}

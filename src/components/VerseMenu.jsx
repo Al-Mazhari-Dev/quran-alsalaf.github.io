@@ -4,6 +4,7 @@ import { copyVerse, loadTafsir, memoIndex, muyassarPlain, verseLabel } from '../
 import { copyText, readNotes, setNote, toggleBookmark, BOOKMARK_COLOR_NAMES, MAX_BOOKMARKS, readBookmarks } from '../lib/userdata.js';
 import { CopyIcon, NO_ACTIONS, NO_MEANINGS, QuotedText, UNAVAILABLE, VerseCard } from './StudySheet.jsx';
 import './VerseMenu.css';
+import { useLayer } from '../lib/layers.js';
 
 /*
   الضغط المطوّل على آية (الفصل ٤): بطاقة عائمة صغيرة فوق الآية، أيقوناتها بترتيب ثابت
@@ -24,6 +25,9 @@ const ACTIONS = [
 export default function VerseMenu({ quran, pressed, onClose, onToast }) {
   const [view, setView] = useState('menu');
   const { v, rect } = pressed;
+  // Esc يغلق البطاقة؛ وفي الملاحظة يحفظها أولًا كزرّ ✕ فيها
+  const saveNote = useRef(null);
+  useLayer(() => (view === 'note' && saveNote.current ? saveNote.current() : onClose()));
 
   const choose = (id) => {
     if (id === 'bookmark') {
@@ -43,17 +47,17 @@ export default function VerseMenu({ quran, pressed, onClose, onToast }) {
   return (
     <div className="vmenu">
       <div className="vmenu__backdrop" onClick={onClose} />
-      {view === 'menu' && <Picker rect={rect} onChoose={choose} hasBookmark={readBookmarks().some((b) => b.v === v)} />}
+      {view === 'menu' && <Picker rect={rect} onChoose={choose} onClose={onClose} hasBookmark={readBookmarks().some((b) => b.v === v)} />}
       {(view === 'tafsir' || view === 'meanings' || view === 'actions') && (
         <DetailCard quran={quran} v={v} kind={view} onClose={onClose} onToast={onToast} />
       )}
-      {view === 'note' && <NoteCard quran={quran} v={v} onClose={onClose} onToast={onToast} />}
+      {view === 'note' && <NoteCard quran={quran} v={v} onClose={onClose} onToast={onToast} saveRef={saveNote} />}
     </div>
   );
 }
 
 // البطاقة الصغيرة فوق الآية (أو تحتها إن ضاق ما فوقها)
-function Picker({ rect, onChoose, hasBookmark }) {
+function Picker({ rect, onChoose, onClose, hasBookmark }) {
   const ref = useRef(null);
   const [pos, setPos] = useState(null);
   useLayoutEffect(() => {
@@ -71,6 +75,12 @@ function Picker({ rect, onChoose, hasBookmark }) {
           </svg>
         </button>
       ))}
+      {/* إغلاق ظاهر على أجهزة الفأرة (VerseMenu.css)؛ وباللمس يُغلق بالنقر خارجها كما كان */}
+      <button type="button" className="vmenu__x" onClick={onClose} aria-label="إغلاق">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -216,7 +226,7 @@ function DetailCard({ quran, v, kind, onClose, onToast }) {
 }
 
 // ملاحظة الآية: تُكتب وتُعدَّل، وتُحفظ عند الحفظ أو الإغلاق؛ وتُحذف بزرّها أو بتفريغها
-function NoteCard({ quran, v, onClose, onToast }) {
+function NoteCard({ quran, v, onClose, onToast, saveRef }) {
   const [text, setText] = useState(() => readNotes()[v] ?? '');
   const existed = useRef(Boolean(readNotes()[v]));
   const save = () => {
@@ -224,6 +234,7 @@ function NoteCard({ quran, v, onClose, onToast }) {
     if (text !== before) setNote(v, text);
     onClose();
   };
+  if (saveRef) saveRef.current = save;
   const remove = () => {
     setNote(v, '');
     onToast('حُذفت الملاحظة');

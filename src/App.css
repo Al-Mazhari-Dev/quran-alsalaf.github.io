@@ -176,32 +176,6 @@
   color: #fff;
 }
 
-/* خانة النطاق المكتمل: ملخصه وزرّ ✕ لمسحه */
-.dock__slot--range {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  padding-inline: 10px;
-  background: var(--accent-soft-strong);
-  border-color: var(--accent);
-}
-
-.dock__clear {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--bg);
-  color: inherit;
-}
-
-.dock__clear svg {
-  width: 16px;
-  height: 16px;
-}
-
 .dock__label {
   font-size: var(--text-sm);
   font-weight: 500;
@@ -286,4 +260,48 @@
   .dock__slot {
     height: 36px;
   }
+}
+
+/* ===== الفأرة ولوحة المفاتيح، وعرض الصفحتين (٢٠٢٦-١١-١٠) ===== */
+
+/* خلفية معتّمة خلف لوحة صفحات المحتوى في عرض الصفحتين، والنقر عليها يغلق اللوحة */
+.study-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgb(0 0 0 / 0.28);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 260ms ease, visibility 0s linear 260ms;
+}
+
+.study-backdrop--open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 260ms ease, visibility 0s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dock__slot:not(:disabled):hover,
+  .topbar__icon:hover,
+  .topbar__search:hover {
+    background: var(--surface-2);
+  }
+}
+
+/* عرض الصفحتين: لا يتجمع الزرّان في الوسط، بل يقع كلٌّ تحت صفحته بعرض سطرها كاملًا
+   ويحاذي حدود نصّها — عرض الشريط عرض الصفحتين (--col-w)، والفاصل بينهما فاصل الصفحتين */
+.app--spread .dock {
+  width: var(--col-w, 100%);
+  margin-inline: auto;
+  padding-inline: 0;
+  gap: 36px;
+}
+
+/* حلقة التركيز للوحة المفاتيح وحدها */
+.topbar button:focus-visible,
+.dock button:focus-visible,
+.reader__arrow:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

@@ -3,19 +3,24 @@ import { toArabicDigits } from '../data/quran.js';
 import { covers, reciterById } from '../lib/reciters.js';
 import { FOREVER, REPEATS, cancelDownload, downloadRange, isDownloaded, setSettings, usePlayer } from '../lib/player.js';
 import ReciterPicker from './ReciterPicker.jsx';
+import RangeBar from './RangeBar.jsx';
 import './ListenSheet.css';
+import { useLayer } from '../lib/layers.js';
 
 /*
   إعدادات الاستماع (الفصل ٦): بطاقة تنزلق من أسفل الشاشة عند الخانة اليمنى —
   القارئ (يُفتح من صفه قائمة كاملة، لا قائمة منسدلة)، وتكرار الآية، وتكرار المقدار
   (ومعه «بلا نهاية»)، ثم زرّ التشغيل الفوري، وتحته تنزيل منفصل اختياري للاستماع بلا إنترنت.
-  label: وصف المقدار المسموع (النطاق المحدد، وإلا الصفحة الحالية)، suras: سوره
+  label: وصف المقدار المسموع (مقدار الاستماع المحدد، وإلا الصفحة أو الصفحتان الظاهرتان)، suras: سوره.
+  وفي أعلاها شريط «تحديد مقدار الآيات» خاص بالاستماع (٢٠٢٦-١١-١٠): range وonPickStart/onPickEnd/onClearRange،
+  مستقل عن مقدار صفحات المحتوى، وبه وحده يُخفت ما خارجه في المصحف.
 */
-export default function ListenSheet({ quran, verses, label, suras, onPlay, onClose, onToast }) {
+export default function ListenSheet({ quran, verses, label, suras, range, onPickStart, onPickEnd, onClearRange, onPlay, onClose, onToast }) {
   const player = usePlayer();
   const { settings, download } = player;
   const active = player.status !== 'idle';
   const [pickerOpen, setPickerOpen] = useState(false);
+  useLayer(onClose);
   const [downloaded, setDownloaded] = useState(false);
   useEffect(() => setDownloaded(isDownloaded(quran, verses)), [quran, verses, settings.reciter, download?.done]);
 
@@ -35,10 +40,10 @@ export default function ListenSheet({ quran, verses, label, suras, onPlay, onClo
   return (
     <div className="listen">
       <div className="listen__backdrop" onClick={onClose} />
-      <section className="listen__card" role="dialog" aria-label="الاستماع">
+      <section className="listen__card" role="dialog" aria-label="الاستماع للآيات">
         <header className="listen__head">
           <div>
-            <h2>الاستماع</h2>
+            <h2>الاستماع للآيات</h2>
             <span>{label}</span>
           </div>
           <button type="button" className="listen__close" onClick={onClose} aria-label="إغلاق">
@@ -47,6 +52,8 @@ export default function ListenSheet({ quran, verses, label, suras, onPlay, onClo
             </svg>
           </button>
         </header>
+
+        <RangeBar quran={quran} range={range} onPickStart={onPickStart} onPickEnd={onPickEnd} onClear={onClearRange} />
 
         <button type="button" className="listen__row listen__row--link" onClick={() => setPickerOpen(true)}>
           <span>القارئ</span>

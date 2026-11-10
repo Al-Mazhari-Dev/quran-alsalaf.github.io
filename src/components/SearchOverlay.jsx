@@ -3,6 +3,7 @@ import { toArabicDigits } from '../data/quran.js';
 import { buildSearchIndex, search } from '../lib/search.js';
 import { addSearchHistory, readSearchHistory, removeSearchHistory } from '../lib/searchHistory.js';
 import './SearchOverlay.css';
+import { useLayer } from '../lib/layers.js';
 
 /*
   البحث الرئيسي (الفصل ٨): خانة ثابتة أعلى منتصف صفحة المصحف تفتح هذه الصفحة الكاملة.
@@ -11,6 +12,7 @@ import './SearchOverlay.css';
   عمليات البحث الناجحة (بطلب صاحب المشروع)، فيُعاد أيٌّ منها بضغطة واحدة.
 */
 export default function SearchOverlay({ quran, onGoto, onClose }) {
+  useLayer(onClose);
   const [q, setQ] = useState('');
   const [history, setHistory] = useState(readSearchHistory);
   const index = useMemo(() => buildSearchIndex(quran), [quran]);
