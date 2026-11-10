@@ -27,8 +27,10 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          # الرابط يكون username.github.io/اسم-المستودع، فيلزم مسار فرعي
-          VITE_BASE: ${{ endsWith(github.event.repository.name, '.github.io') && '/' || format('/{0}/', github.event.repository.name) }}
+          # الرابط يكون username.github.io/اسم-المستودع، فيلزم مسار فرعي؛ إلا مستودع الموقع الشخصي
+          # (اسمه username.github.io لصاحب الحساب نفسه) فيُخدَم من الجذر. والمقارنة لا تفرّق بين حروف
+          # كبيرة وصغيرة، فتبقى صحيحة إن غُيّر اسم الحساب
+          VITE_BASE: ${{ github.event.repository.name == format('{0}.github.io', github.repository_owner) && '/' || format('/{0}/', github.event.repository.name) }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
