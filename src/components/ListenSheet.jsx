@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toArabicDigits } from '../data/quran.js';
-import { covers, reciterById } from '../lib/reciters.js';
+import { covers, reciterById, reciterTitle } from '../lib/reciters.js';
 import { FOREVER, REPEATS, cancelDownload, downloadRange, isDownloaded, setSettings, usePlayer } from '../lib/player.js';
 import ReciterPicker from './ReciterPicker.jsx';
 import RangeBar from './RangeBar.jsx';
@@ -58,11 +58,11 @@ export default function ListenSheet({ quran, verses, label, suras, range, onPick
         <button type="button" className="listen__row listen__row--link" onClick={() => setPickerOpen(true)}>
           <span>القارئ</span>
           <span className="listen__value">
-            {missing ? 'اختر قارئًا' : chosen.name}
+            {missing ? 'اختر قارئًا' : reciterTitle(chosen)}
             <ChevronIcon />
           </span>
         </button>
-        {missing && <p className="listen__warn">تسجيل {chosen.name} لا يشمل هذا الموضع؛ اختر قارئًا آخر.</p>}
+        {missing && <p className="listen__warn">تسجيل {reciterTitle(chosen)} لا يشمل هذا الموضع؛ اختر قارئًا آخر.</p>}
 
         <label className="listen__row">
           <span>تكرار الآية</span>
