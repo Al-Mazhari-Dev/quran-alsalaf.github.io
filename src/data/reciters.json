@@ -1,0 +1,24 @@
+{
+  "sources": {
+    "everyayah": "https://everyayah.com/data/{folder}/{sura}{ayah}.mp3"
+  },
+  "reciters": [
+    { "id": "shuraym", "name": "سعود الشريم", "source": "everyayah", "folder": "Saood_ash-Shuraym_128kbps" },
+    { "id": "ayyoub", "name": "محمد أيوب", "source": "everyayah", "folder": "Muhammad_Ayyoub_128kbps" },
+    { "id": "minshawi", "name": "محمد صديق المنشاوي", "source": "everyayah", "folder": "Minshawy_Murattal_128kbps" },
+    { "id": "husary", "name": "محمود خليل الحصري", "source": "everyayah", "folder": "Husary_128kbps" },
+    { "id": "dosari", "name": "ياسر الدوسري", "source": "everyayah", "folder": "Yasser_Ad-Dussary_128kbps" },
+    { "id": "muaiqly", "name": "ماهر المعيقلي", "source": "everyayah", "folder": "MaherAlMuaiqly128kbps" },
+    { "id": "shatri", "name": "أبو بكر الشاطري", "source": "everyayah", "folder": "Abu_Bakr_Ash-Shaatree_128kbps" },
+    { "id": "akhdar", "name": "إبراهيم الأخضر", "source": "everyayah", "folder": "Ibrahim_Akhdar_32kbps" },
+    { "id": "abdulbasit", "name": "عبد الباسط عبد الصمد", "source": "everyayah", "folder": "Abdul_Basit_Murattal_64kbps" },
+    { "id": "afasy", "name": "مشاري العفاسي", "source": "everyayah", "folder": "Alafasy_128kbps" },
+    { "id": "qatami", "name": "ناصر القطامي", "source": "everyayah", "folder": "Nasser_Alqatami_128kbps" },
+    { "id": "hudhaify", "name": "علي الحذيفي", "source": "everyayah", "folder": "Hudhaify_128kbps" },
+    { "id": "juhany", "name": "عبد الله الجهني", "source": "everyayah", "folder": "Abdullaah_3awwaad_Al-Juhaynee_128kbps" },
+    { "id": "matroud", "name": "عبد الله المطرود", "source": "everyayah", "folder": "Abdullah_Matroud_128kbps" },
+    { "id": "jaber", "name": "علي جابر", "source": "everyayah", "folder": "Ali_Jaber_64kbps" },
+    { "id": "ghamdi", "name": "سعد الغامدي", "source": "everyayah", "folder": "Ghamadi_40kbps" },
+    { "id": "tunaiji", "name": "خليفة الطنيجي", "source": "everyayah", "folder": "khalefa_al_tunaiji_64kbps" }
+  ]
+}
