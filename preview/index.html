@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- صفحة أدوات داخلية لصاحب المشروع: لا تُفهرَس ولا يُشار إليها من داخل التطبيق -->
+    <meta name="robots" content="noindex, nofollow" />
+    <title>معاينة الشاشتين — قرآن السلف</title>
+    <style>
+      :root {
+        --page: #f4f3f8;
+        --ink: #323235;
+        --ink-muted: #6b6b73;
+        --accent: #1a0165;
+        --btn: #ffffff;
+        --btn-border: #d2d2d9;
+        --bezel: #23213a;
+        --bezel-edge: #3a3758;
+        --base: #c9c8d4;
+        --base-edge: #a9a8b8;
+        --gap: 32px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page: #14141a;
+          --ink: #e6e6ea;
+          --ink-muted: #9b9ba3;
+          --accent: #38b0f2;
+          --btn: #24242c;
+          --btn-border: #3a3a44;
+          --bezel: #0b0a14;
+          --bezel-edge: #34324a;
+          --base: #4a4958;
+          --base-edge: #383745;
+        }
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        background: var(--page);
+        color: var(--ink);
+        font-family: 'Rubik', system-ui, 'Segoe UI', Tahoma, sans-serif;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ===== شريط التحكم ===== */
+      .bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        flex-wrap: wrap;
+      }
+      .bar h1 {
+        font-size: 15px;
+        font-weight: 600;
+        margin: 0;
+        margin-inline-end: auto;
+        color: var(--accent);
+      }
+      .bar button {
+        font: inherit;
+        font-size: 14px;
+        color: var(--ink);
+        background: var(--btn);
+        border: 1px solid var(--btn-border);
+        border-radius: 999px;
+        padding: 6px 14px;
+        cursor: pointer;
+      }
+      .bar button:hover { border-color: var(--accent); }
+
+      /* ===== منطقة العرض ===== */
+      .stage {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--gap);
+        padding: 8px 16px;
+        min-height: 0;
+      }
+      .stage.stacked { flex-direction: column; flex: none; }
+
+      .slot {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      /* حاوية بالمقاس بعد التصغير؛ والجهاز داخلها بمقاسه الحقيقي مصغَّرًا بـ transform */
+      .fit { position: relative; overflow: hidden; }
+      .device {
+        position: absolute;
+        top: 0;
+        right: 0;
+        transform-origin: top right;
+        /* بمقاسه الحقيقي لا بعرض الحاوية المصغَّرة */
+        width: max-content;
+      }
+      .caption {
+        font-size: 13px;
+        color: var(--ink-muted);
+        direction: rtl;
+      }
+
+      iframe {
+        display: block;
+        border: 0;
+        background: #fff;
+      }
+
+      /* ===== إطار اللابتوب ===== */
+      .laptop .lid {
+        padding: 18px;
+        background: var(--bezel);
+        border: 2px solid var(--bezel-edge);
+        border-radius: 22px 22px 10px 10px;
+      }
+      .laptop .lid iframe { border-radius: 4px; }
+      .laptop .base {
+        height: 26px;
+        margin: 0 -84px;
+        background: linear-gradient(var(--base), var(--base-edge));
+        border-radius: 2px 2px 18px 18px;
+        position: relative;
+      }
+      .laptop .base::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        width: 180px;
+        height: 8px;
+        transform: translateX(-50%);
+        background: var(--base-edge);
+        border-radius: 0 0 10px 10px;
+      }
+
+      /* ===== إطار الجوال ===== */
+      .phone {
+        padding: 14px;
+        background: var(--bezel);
+        border: 2px solid var(--bezel-edge);
+        border-radius: 52px;
+        position: relative;
+        transition: transform 0.35s ease;
+      }
+      .phone iframe { border-radius: 40px; }
+      .phone .notch {
+        position: absolute;
+        background: var(--bezel);
+        border-radius: 999px;
+        z-index: 1;
+      }
+      .phone.portrait .notch {
+        top: 24px;
+        left: 50%;
+        width: 96px;
+        height: 26px;
+        transform: translateX(-50%);
+      }
+      .phone.landscape .notch {
+        left: 24px;
+        top: 50%;
+        width: 26px;
+        height: 96px;
+        transform: translateY(-50%);
+      }
+
+      .note {
+        text-align: center;
+        font-size: 12px;
+        color: var(--ink-muted);
+        padding: 6px 16px 12px;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <h1>معاينة الشاشتين</h1>
+      <button type="button" id="rotate">تدوير الجوال</button>
+      <button type="button" id="reload">إعادة تحميل</button>
+    </div>
+
+    <main class="stage" id="stage">
+      <!-- في الاتجاه من اليمين لليسار يقع الأول يمينًا: اللابتوب يمينًا والجوال يسارًا -->
+      <section class="slot">
+        <div class="fit" id="laptopFit">
+          <div class="device laptop" id="laptop">
+            <div class="lid">
+              <iframe id="laptopFrame" title="التطبيق على شاشة لابتوب" width="1440" height="900"></iframe>
+            </div>
+            <div class="base"></div>
+          </div>
+        </div>
+        <div class="caption">لابتوب <bdi dir="ltr">1440×900</bdi></div>
+      </section>
+
+      <section class="slot">
+        <div class="fit" id="phoneFit">
+          <div class="device phone portrait" id="phone">
+            <div class="notch"></div>
+            <iframe id="phoneFrame" title="التطبيق على شاشة جوال" width="390" height="844"></iframe>
+          </div>
+        </div>
+        <div class="caption">جوال <bdi dir="ltr" id="phoneCaption">390×844</bdi></div>
+      </section>
+    </main>
+
+    <p class="note">
+      الإطاران من نفس الأصل، فيتشاركان التخزين المحلي (آخر موضع قراءة، الإعدادات، العلامات).
+    </p>
+
+    <script>
+      (function () {
+        // رابط التطبيق: المجلد الأب لهذه الصفحة، فيصح على GitHub Pages (مسار فرعي) وعلى رابط
+        // المعاينة (الجذر)، وسواء فُتحت الصفحة بشرطة أخيرة أو بدونها
+        var appUrl = location.pathname.replace(/preview(\/(index\.html)?)?$/, '');
+
+        var laptopFrame = document.getElementById('laptopFrame');
+        var phoneFrame = document.getElementById('phoneFrame');
+        var laptop = document.getElementById('laptop');
+        var phone = document.getElementById('phone');
+        var laptopFit = document.getElementById('laptopFit');
+        var phoneFit = document.getElementById('phoneFit');
+        var phoneCaption = document.getElementById('phoneCaption');
+        var stage = document.getElementById('stage');
+
+        laptopFrame.src = appUrl;
+        phoneFrame.src = appUrl;
+
+        var landscape = false;
+
+        function setPhoneSize() {
+          var w = landscape ? 844 : 390;
+          var h = landscape ? 390 : 844;
+          phoneFrame.width = w;
+          phoneFrame.height = h;
+          phone.classList.toggle('landscape', landscape);
+          phone.classList.toggle('portrait', !landscape);
+          phoneCaption.textContent = w + '×' + h;
+        }
+
+        function fit() {
+          // المقاسات الحقيقية للجهازين بإطاريهما قبل التصغير
+          var lw = laptop.offsetWidth, lh = laptop.offsetHeight;
+          var pw = phone.offsetWidth, ph = phone.offsetHeight;
+          // قاعدة اللابتوب أعرض من غطائه بهوامش سالبة
+          var base = laptop.querySelector('.base');
+          var lwFull = Math.max(lw, base.offsetWidth);
+
+          var gap = 32;
+          var captionH = 30;
+          var availW = document.documentElement.clientWidth - 32;
+          // من ارتفاع النافذة لا من ارتفاع منطقة العرض، لئلا يتأرجح الحساب بين الوضعين
+          var bar = document.querySelector('.bar').offsetHeight;
+          var note = document.querySelector('.note').offsetHeight;
+          var availH = window.innerHeight - bar - note - 32;
+
+          // جنبًا إلى جنب: يُصغَّران بنسبة واحدة ليبقى الفرق بين المقاسين ظاهرًا
+          var sRow = Math.min(
+            (availW - gap) / (lwFull + pw),
+            (availH - captionH) / Math.max(lh, ph)
+          );
+          // رأسيًا (للنوافذ الضيقة): كل جهاز يملأ العرض بلا تمرير أفقي، ويُسمح بالتمرير الرأسي
+          var stacked = sRow < 0.35;
+          stage.classList.toggle('stacked', stacked);
+
+          var sL, sP;
+          if (stacked) {
+            sL = Math.min(availW / lwFull, 1);
+            sP = Math.min(availW / pw, (availH - captionH) / ph, 1);
+          } else {
+            sL = sP = Math.min(sRow, 1);
+          }
+
+          apply(laptop, laptopFit, sL, lw, lh, lwFull);
+          apply(phone, phoneFit, sP, pw, ph, pw);
+        }
+
+        function apply(device, box, s, w, h, wFull) {
+          device.style.transform = 'scale(' + s + ')';
+          // الإزاحة تُبقي القاعدة الأعرض داخل الحاوية
+          device.style.right = ((wFull - w) / 2) * s + 'px';
+          box.style.width = wFull * s + 'px';
+          box.style.height = h * s + 'px';
+        }
+
+        document.getElementById('rotate').addEventListener('click', function () {
+          landscape = !landscape;
+          setPhoneSize();
+          fit();
+        });
+
+        document.getElementById('reload').addEventListener('click', function () {
+          [laptopFrame, phoneFrame].forEach(function (f) {
+            try {
+              f.contentWindow.location.reload();
+            } catch (e) {
+              f.src = appUrl;
+            }
+          });
+        });
+
+        window.addEventListener('resize', fit);
+        setPhoneSize();
+        fit();
+      })();
+    </script>
+  </body>
+</html>

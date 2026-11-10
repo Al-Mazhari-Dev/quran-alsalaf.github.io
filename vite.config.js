@@ -9,6 +9,15 @@ const base = process.env.VITE_BASE || '/';
 
 export default defineConfig({
   base,
+  build: {
+    rollupOptions: {
+      // صفحة المعاينة الداخلية (preview/index.html) تُبنى مستقلة بجانب التطبيق، بلا رابط إليها منه
+      input: {
+        main: 'index.html',
+        preview: 'preview/index.html',
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -51,9 +60,12 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,woff2,ttf,png,svg,json}'],
         // خطوط الصفحات الـ٦٠٤ (نحو ٤٨ ميغابايت) لا تُنزَّل كلها عند التثبيت:
         // تُنزَّل كل صفحة عند أول فتح لها وتُحفظ (أدناه)، فتعمل بعدها بلا إنترنت
-        globIgnores: ['fonts/qcf4/**'],
+        // وصفحة المعاينة الداخلية لا تُخزَّن مسبقًا: أداة لصاحب المشروع لا جزء من التطبيق
+        globIgnores: ['fonts/qcf4/**', 'preview/**'],
         maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
         navigateFallback: base + 'index.html',
+        // لا يُعاد التطبيق بدل صفحة المعاينة إذا كُتب مسارها مباشرة (بشرطة أخيرة أو بدونها)
+        navigateFallbackDenylist: [/\/preview(\/|\/index\.html)?$/],
         runtimeCaching: [
           {
             urlPattern: /\/fonts\/qcf4\/p\d+\.woff2$/,
