@@ -24,7 +24,7 @@
   --accent-soft-strong: rgba(26, 1, 101, 0.14);
 
   /* خلفية مقرر الأسبوع الملوّن في صفحة المصحف: خفيفة لا تنافس الحبر */
-  --week-tint: rgba(254, 125, 27, 0.09);
+  --week-tint: rgba(214, 186, 140, 0.2); /* بيج فاتح */
 
   --shadow-card: 0 1px 2px rgba(50, 50, 53, 0.05), 0 8px 24px rgba(50, 50, 53, 0.08);
   --shadow-float: 0 2px 6px rgba(50, 50, 53, 0.08), 0 16px 40px rgba(50, 50, 53, 0.14);
@@ -84,7 +84,7 @@
   --accent-soft: rgba(56, 176, 242, 0.12);
   --accent-soft-strong: rgba(56, 176, 242, 0.2);
 
-  --week-tint: rgba(255, 148, 64, 0.1);
+  --week-tint: rgba(160, 160, 172, 0.14); /* رصاصي */
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.36);
   --shadow-float: 0 2px 6px rgba(0, 0, 0, 0.45), 0 16px 40px rgba(0, 0, 0, 0.5);
