@@ -98,7 +98,8 @@
           var surfaces = [B, mix(B, layer, k.surface), s2, mix(B, layer, k['surface-3']), mix(s2, A, k.soft)];
           var text = A;
           for (var t = 0; t <= 100; t += 2) {
-            text = mix(A, layer, t);
+            // مقرَّبًا إلى درجاته الفعلية (٠–٢٥٥) قبل قياسه، كما سيُرسم
+            text = mix(A, layer, t).map(Math.round);
             var ok = true;
             for (var i = 0; i < surfaces.length; i++) if (contrast(text, surfaces[i]) < 4.5) ok = false;
             if (ok) break;
