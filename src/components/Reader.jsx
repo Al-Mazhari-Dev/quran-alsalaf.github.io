@@ -246,8 +246,8 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLon
     const v = span >= 16 ? (last.x - first.x) / span : 0;
     const flick = Math.abs(mx) >= FLICK_MIN_PX && Math.abs(v) > FLICK_SPEED && Math.sign(v) === Math.sign(mx);
     let dir = 0;
-    if (mx > box.w * TURN_RATIO || (flick && mx > 0)) dir = 1;
-    else if (mx < -box.w * TURN_RATIO || (flick && mx < 0)) dir = -1;
+    if (mx > box.w * TURN_RATIO || (flick && mx > 0)) dir = -1;
+    else if (mx < -box.w * TURN_RATIO || (flick && mx < 0)) dir = 1;
     settle(dir);
   };
 
