@@ -52,10 +52,25 @@ function audioMock() {
   };
 }
 
+/*
+  محاكاة الحافظة: ما ينسخه التطبيق يُحفظ في window.__clip (آخره __clip.at(-1))، بلا حاجة لإذن
+  الحافظة في المتصفح الآلي. clipboardFails: تُرفض الكتابة كمتصفح لا يتيح الحافظة.
+*/
+function clipboardMock(fails) {
+  window.__clip = [];
+  const clip = {
+    writeText: (t) => (fails ? Promise.reject(new Error('denied')) : (window.__clip.push(t), Promise.resolve())),
+    readText: () => Promise.resolve(window.__clip.at(-1) ?? ''),
+  };
+  Object.defineProperty(navigator, 'clipboard', { get: () => clip, configurable: true });
+}
+export const copied = (page) => page.evaluate(() => window.__clip.at(-1));
+
 // يجهّز الصفحة قبل فتحها: محاكاة الصوت، وبيانات محلية تُكتب مرة واحدة فقط (لا عند إعادة الفتح)
 export async function prepare(page, storage = {}) {
   await page.route(/everyayah\.com|tarteel\.ai/, (r) => r.abort());
   await page.addInitScript(audioMock);
+  await page.addInitScript(clipboardMock, false);
   await page.addInitScript((data) => {
     if (sessionStorage.getItem('__seeded')) return;
     sessionStorage.setItem('__seeded', '1');
