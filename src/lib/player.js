@@ -50,6 +50,7 @@ let queue = []; // آيات النطاق (أرقامها في المصحف)
 let pos = 0; // موضع الآية الجارية في النطاق
 let verseRep = 0; // كم مرة قُرئت الآية الجارية
 let rangeRep = 0; // كم مرة قُرئ النطاق
+let continuous = false; // استماع بلا مقدار: من الصفحة الظاهرة متتابعًا إلى آخر المصحف، بلا تكرار للمقدار
 let seg = null; // المقطع الجاري: { v, s, a, basmala }
 let gen = 0; // يُزاد عند كل تشغيل أو إيقاف جديد، فيُهمل ما تأخر من طلبات تشغيل سابقة
 let dlToken = 0; // يُزاد عند كل تنزيل أو إلغاء، مستقل عن gen، فلا يقطع أحدهما الآخر
@@ -166,12 +167,14 @@ export function isDownloaded(q, verses) {
 
 // يبدأ الاستماع لآيات verses فورًا: من ملف منزَّل إن وُجد، وإلا بثًّا مباشرًا. النتيجة:
 // 'unsupported' (القارئ المختار لا يشمل تسجيلُه موضعها، كما في downloadRange) · 'playing'
-export function play(q, verses) {
+// cont: استماع متتابع بلا مقدار (verses من أول الصفحة الظاهرة إلى آخر المصحف): لا يُكرَّر، ويقف في آخره
+export function play(q, verses, cont = false) {
   quran = q;
   const r = reciterById(state.settings.reciter);
   if (!covers(r, suraList(verses))) return 'unsupported';
   ++gen;
   queue = verses;
+  continuous = cont;
   pos = 0;
   verseRep = 0;
   rangeRep = 0;
@@ -183,16 +186,17 @@ export function play(q, verses) {
 // تعديل المقدار أثناء التشغيل (عند إغلاق نافذة الاستماع بعد تعديله): إن بقيت الآية الجارية داخل
 // المقدار الجديد أكمل منها بلا انقطاع وانتهى عند نهايته الجديدة، بعدّاد التكرار نفسه؛ وإلا بدأ من
 // أول آية فيه بعدّاد تكرار جديد. النتيجة كـplay()، أو 'continued' إن أكمل من حيث هو
-export function retarget(q, verses) {
+export function retarget(q, verses, cont = false) {
   if (state.status === 'idle') return 'idle';
   const at = verses.indexOf(queue[pos]);
-  if (at < 0) return play(q, verses);
+  if (at < 0) return play(q, verses, cont);
   quran = q;
   if (!covers(reciterById(state.settings.reciter), suraList(verses))) {
     stop();
     return 'unsupported';
   }
   queue = verses;
+  continuous = cont;
   pos = at;
   return 'continued';
 }
@@ -240,6 +244,7 @@ function segmentDone() {
   if (++verseRep < verseRepeat) return startVerse(false);
   verseRep = 0;
   if (++pos >= queue.length) {
+    if (continuous) return stop();
     pos = 0;
     if (rangeRepeat !== FOREVER && ++rangeRep >= rangeRepeat) return stop();
   }

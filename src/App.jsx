@@ -84,7 +84,9 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // الاستماع (الفصل ٦): المقدار المسموع مقدار الاستماع المحدد، وإلا الصفحة أو الصفحتان الظاهرتان
+  // الاستماع (الفصل ٦): المقدار المسموع مقدار الاستماع المحدد. وبلا مقدار (٢٠٢٦-١١-١١): من أول الصفحة
+  // الظاهرة (أو أول اليمنى من الصفحتين) متتابعًا إلى آخر المصحف، يقلّب الصفحات معه بلا توقف ولا تكرار
+  // للمقدار. والتنزيل بلا مقدار يبقى للصفحة أو الصفحتين الظاهرتين (range)
   const player = usePlayer();
   const [listenOpen, setListenOpen] = useState(false);
   const listenSuras = useMemo(() => (quran ? [...new Set(range.map((v) => quran.verses[v].s))] : []), [quran, range]);
@@ -93,15 +95,18 @@ export default function App() {
     (selection
       ? verseLabel(quran, selection)
       : spread
-        ? `الصفحتان ${toArabicDigits(shownPages[0])}–${toArabicDigits(shownPages[1])}`
-        : `الصفحة ${toArabicDigits(page)}`);
+        ? `من الصفحتين ${toArabicDigits(shownPages[0])}–${toArabicDigits(shownPages[1])} متتابعًا`
+        : `من الصفحة ${toArabicDigits(page)} متتابعًا`);
+  // ما يُشغَّل: المقدار المحدد، وإلا من أول الآيات الظاهرة إلى آخر المصحف
+  const playVerses = () =>
+    selection ? range : Array.from({ length: quran.verses.length - shownVerses[0] }, (_, i) => shownVerses[0] + i);
   // مقدار الاستماع الذي بدأ به التشغيل الجاري: إن عُدِّل أثناءه طُبِّق عند إغلاق نافذة الاستماع («تم»)
   const playedSel = useRef(null);
   const sameSel = (a, b) => a?.[0] === b?.[0] && a?.[1] === b?.[1];
   const startListening = () => {
     playedSel.current = selection;
     // play() ترجع 'unsupported' أو 'playing' (src/lib/player.js)، ونافذة الاستماع تبقى مفتوحة كما كانت
-    if (play(quran, range) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
+    if (play(quran, playVerses(), !selection) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
     // أخطاء التشغيل نفسه تظهر من التأثير أدناه (player.error)
   };
   // إغلاق نافذة الاستماع أثناء التشغيل بعد تعديل المقدار: الآية الجارية خارج المقدار الجديد ⇐ يبدأ من
@@ -110,7 +115,7 @@ export default function App() {
     setListenOpen(false);
     if (player.status === 'idle' || sameSel(selection, playedSel.current)) return;
     playedSel.current = selection;
-    if (retarget(quran, range) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
+    if (retarget(quran, playVerses(), !selection) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
   };
   useEffect(() => {
     if (player.error) showToast(player.error.text);
@@ -467,6 +472,7 @@ export default function App() {
         <ListenSheet
           quran={quran}
           verses={range}
+          continuous={!selection}
           label={listenLabel}
           suras={listenSuras}
           range={user.range}
