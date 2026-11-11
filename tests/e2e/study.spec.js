@@ -15,6 +15,8 @@ test.beforeEach(async ({ page }) => {
 
 test('لوحة متمركزة في اللابتوب وصفحة كاملة في الجوال', async ({ page }, testInfo) => {
   await open(page);
+  // بعد اكتمال انزلاقها
+  await expect.poll(async () => Math.round((await study(page).boundingBox()).x)).toBe(isLaptop(testInfo) ? 340 : 0);
   const box = await study(page).boundingBox();
   if (isLaptop(testInfo)) {
     await expect(study(page)).toHaveClass(/study--panel/);

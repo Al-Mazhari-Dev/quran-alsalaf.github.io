@@ -82,9 +82,11 @@ test('التقليب بالسحب: السحب نحو اليمين يأتي با�
   const step = isLaptop(testInfo) ? 2 : 1;
   await openApp(page, { 'hq.page': '201' });
   const start = (await shownPages(page))[0];
-  await drag(page, 220);
+  // ٣٠٪ من العرض: فوق حد القلب بالمسافة (٢٢٪)، فلا يتوقف النجاح على سرعة السحب (للنفضة اختبارها)
+  const far = Math.round(page.viewportSize().width * 0.3);
+  await drag(page, far);
   await expect.poll(async () => (await shownPages(page))[0]).toBe(start + step);
-  await drag(page, -220);
+  await drag(page, -far);
   await expect.poll(async () => (await shownPages(page))[0]).toBe(start);
   // سحبة قصيرة بطيئة لا تقلب
   await drag(page, 30);

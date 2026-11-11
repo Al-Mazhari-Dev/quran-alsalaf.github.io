@@ -178,21 +178,41 @@ test('تعذّر تشغيل الصوت (لا اتصال): رسالة ويتوق�
 });
 
 // ---------- لوحة اللمس ولوحة المفاتيح والفأرة (اللابتوب) ----------
+// أحداث العجلة تُرسل من داخل الصفحة بإيقاع لوحة لمس حقيقية (نحو ٦٠ في الثانية)؛ فإرسالها من خارجها
+// يباعد بينها على جهاز مشغول، فيعدّ التطبيق كل حدث سحبة مستقلة (وهو صحيح لحركات متباعدة)
+const swipePad = (page, dx, count) =>
+  page.evaluate(
+    ([dx, count]) =>
+      new Promise((done) => {
+        const el = document.querySelector('.reader');
+        let i = 0;
+        const tick = () => {
+          if (i++ >= count) return done();
+          el.dispatchEvent(new WheelEvent('wheel', { deltaX: dx, deltaY: 0, bubbles: true, cancelable: true }));
+          setTimeout(tick, 16);
+        };
+        tick();
+      }),
+    [dx, count]
+  );
+
 test('سحب إصبعين على لوحة اللمس يقلب الزوج، والسحب اليسير لا يقلب', async ({ page }, testInfo) => {
   test.skip(!isLaptop(testInfo), 'لوحة لمس الحاسوب');
   await openApp(page, { 'hq.page': '41' });
-  await page.mouse.move(720, 450);
-  // حركة الإصبعين نحو اليمين (deltaX سالب) للتالية
-  for (let i = 0; i < 8; i++) await page.mouse.wheel(-60, 0);
+  // حركة الإصبعين نحو اليمين (deltaX سالب) للتالية، وما بقي من قصورها بعد القلب لا يقلب ثانية
+  await swipePad(page, -40, 20);
   await expect.poll(() => shownPages(page)).toEqual([43, 44]);
-  await page.waitForTimeout(400);
-  for (let i = 0; i < 8; i++) await page.mouse.wheel(60, 0);
+  await page.waitForTimeout(500);
+  expect(await shownPages(page)).toEqual([43, 44]);
+  await swipePad(page, 40, 20);
   await expect.poll(() => shownPages(page)).toEqual([41, 42]);
-  await page.waitForTimeout(400);
-  await page.mouse.wheel(-20, 0);
+  await page.waitForTimeout(500);
+  // سحب يسير (أقل من ٤٨ بكسل) يعود مكانه
+  await swipePad(page, -10, 3);
   await page.waitForTimeout(500);
   expect(await shownPages(page)).toEqual([41, 42]);
   // التمرير الرأسي لا يقلب
+  await page.mouse.move(720, 450);
   await page.mouse.wheel(0, 500);
   await page.waitForTimeout(500);
   expect(await shownPages(page)).toEqual([41, 42]);

@@ -55,9 +55,10 @@ test('التقليب التلقائي عند حد الصفحة (والرجوع �
   await expect(word(page, pageVerses(next[0])[0])).toHaveClass(/w--playing/);
 
   // قلّب المستخدم بيده بعيدًا: عند بدء الآية التالية يعود المصحف إلى صفحة القارئ
+  // ويُنتظر استقرار تقليبه قبل الآية التالية
   await page.keyboard.press('ArrowLeft');
-  await page.keyboard.press('ArrowLeft');
-  await expect.poll(async () => (await shownPages(page))[0]).not.toBe(next[0]);
+  await expect.poll(async () => (await shownPages(page))[0]).toBe(next[0] + (laptop ? 2 : 1));
+  await page.waitForTimeout(400);
   await end(page);
   await expect.poll(() => shownPages(page)).toEqual(next);
 });
