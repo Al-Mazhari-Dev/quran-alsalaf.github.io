@@ -101,6 +101,6 @@
 }
 
 .rcpick__row[aria-checked='true'] .rcpick__name {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }

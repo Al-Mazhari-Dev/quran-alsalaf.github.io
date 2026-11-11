@@ -12,5 +12,9 @@
     { "id": "maroon", "name": "عنّابي", "light": "#8C2F3C", "dark": "#E8939D" },
     { "id": "mauve", "name": "موف", "light": "#6A4C9C", "dark": "#B9A2E0" }
   ],
-  "defaults": { "light": "beige", "dark": "gray", "accent": "blue" }
+  "defaults": { "light": "beige", "dark": "gray", "accent": "blue" },
+  "mix": {
+    "light": { "surface": 3, "surface-2": 5.5, "surface-3": 8.5, "border": 11, "border-strong": 18, "muted": 74, "faint": 52, "soft": 10, "soft-strong": 17, "week": 16, "decor-fill": 22, "decor-dot": 30 },
+    "dark": { "surface": 6, "surface-2": 9.5, "surface-3": 13, "border": 13, "border-strong": 21, "muted": 70, "faint": 48, "soft": 16, "soft-strong": 26, "week": 15, "decor-fill": 36, "decor-dot": 30 }
+  }
 }
