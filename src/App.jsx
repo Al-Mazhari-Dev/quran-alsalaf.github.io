@@ -103,8 +103,17 @@ export default function App() {
   // مقدار الاستماع الذي بدأ به التشغيل الجاري: إن عُدِّل أثناءه طُبِّق عند إغلاق نافذة الاستماع («تم»)
   const playedSel = useRef(null);
   const sameSel = (a, b) => a?.[0] === b?.[0] && a?.[1] === b?.[1];
+  // نقل المصحف إلى صفحة آية إن لم تكن ظاهرة: صفحتها في عرض الصفحة الواحدة، وزوجها في عرض الصفحتين
+  // (Reader يحوّل الصفحة إلى أول زوجها)
+  const showVerse = (v) => {
+    const p = quran.verses[v].p;
+    if (!shownPages.includes(p)) setGotoPage({ page: p, n: Date.now() });
+  };
   const startListening = () => {
     playedSel.current = selection;
+    // الانتقال إلى بداية المقدار (٢٠٢٦-١١-١١): من أول ضغطة تشغيل، قبل أن يبدأ الصوت، ينتقل المصحف إلى
+    // صفحة أول آية في مقدار الاستماع إن كان بعيدًا عن الظاهر. وبلا مقدار يبدأ من الظاهر فلا انتقال
+    if (selection) showVerse(selection[0]);
     // play() ترجع 'unsupported' أو 'playing' (src/lib/player.js)، ونافذة الاستماع تبقى مفتوحة كما كانت
     if (play(quran, playVerses(), !selection) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
     // أخطاء التشغيل نفسه تظهر من التأثير أدناه (player.error)
@@ -162,8 +171,10 @@ export default function App() {
     setPressed({ v, rect });
   }, []);
 
-  // اختيار آية من المنتقي: البداية ثم النهاية، كلٌّ في مقداره. والمصحف يبقى مكانه (لم يعد مقدار
-  // الاستماع يُخفت شيئًا، فلا حاجة لنقل المصحف إليه، ولئلا يبتعد عن صفحة القارئ أثناء التشغيل)
+  // اختيار آية من المنتقي: البداية ثم النهاية، كلٌّ في مقداره. واختيار البداية وحده لا يحرّك المصحف.
+  // ومقدار الاستماع لا يحرّكه عند التحديد أصلًا (ينتقل عند التشغيل، startListening). أما مقدار صفحات
+  // المحتوى (٢٠٢٦-١١-١١، بدل إبقاء المصحف مكانه): عند اكتماله ينتقل المصحف خلف صفحات المحتوى إلى صفحة
+  // أول آية فيه (وزوجها في عرض الصفحتين)، فإذا أغلقها وجد المقدار أمامه وما خارجه مُخفَت
   const pickVerse = (v) => {
     const content = picking.target === 'content';
     const save = content ? saveContentRange : saveRange;
@@ -171,6 +182,7 @@ export default function App() {
     else {
       const s = (content ? user.contentRange : user.range)[0];
       save(v < s ? [v, s] : [s, v]);
+      if (content) showVerse(Math.min(v, s));
     }
     setPicking(null);
   };
