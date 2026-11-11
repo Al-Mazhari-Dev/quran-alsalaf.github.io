@@ -443,7 +443,8 @@ function Sheet({ quran, page, layout, scroll, shift, current, marks, half, font:
         <span className="sheet__juz">{juzLabel(juz)}</span>
         <span className="sheet__num">
           <span>{toArabicDigits(page)}</span>
-          <PageSideIcon right={page % 2 === 1} />
+          {/* أيقونة اليمنى/اليسرى في نسخة الجوال وحدها؛ في نسخة اللابتوب الصفحتان ظاهرتان فلا حاجة لها */}
+          {!half && <PageSideIcon right={page % 2 === 1} />}
         </span>
         <span className="sheet__sura">{stripTashkeel(SURA_NAMES_VOWELED[sura.n - 1])}</span>
       </header>
@@ -468,7 +469,7 @@ function Sheet({ quran, page, layout, scroll, shift, current, marks, half, font:
 }
 
 // مصحف مفتوح صغير يُظهر موضع الصفحة منه: في مصحف المدينة الفردية يمنى
-// (الفاتحة يمنى) والزوجية يسرى. فالجهة الحالية مشرّبة بلون التمييز وأسطرها بلونه،
+// (الفاتحة يمنى) والزوجية يسرى. فالجهة الحالية مشرّبة بلون التطبيق وأسطرها بلونه،
 // والأخرى خافتة — تمييز هادئ لا لون صارخ.
 const PAGE_LEFT = 'M16 5.2C12.6 2.9 7.6 2.4 3 3.4v11.8c4.6-1 9.6-.5 13 1.8Z';
 const PAGE_RIGHT = 'M16 5.2c3.4-2.3 8.4-2.8 13-1.8v11.8c-4.6-1-9.6-.5-13 1.8Z';
