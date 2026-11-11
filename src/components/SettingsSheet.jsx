@@ -132,7 +132,7 @@ function SegmentRow({ label, value, options, onChange }) {
   );
 }
 
-// صفّ دوائر ملوّنة وأسماؤها تحتها. والمختارة بحلقة بلون التطبيق وعلامة صح؛ و`mark` لون علامة الصح
+// صفّ دوائر ملوّنة بلا أسماء مكتوبة (بطلب صاحب المشروع)؛ واسم كل لون لقارئ الشاشة وتلميح الفأرة. والمختارة بحلقة بلون التطبيق وعلامة صح؛ و`mark` لون علامة الصح
 // إن لم تكن بلون نص الزر الملوّن (في دوائر الخلفيات: بلون نص المصحف عليها)
 function SwatchRow({ label, value, options, onChange }) {
   return (
@@ -151,6 +151,8 @@ function SwatchRow({ label, value, options, onChange }) {
             role="radio"
             aria-checked={value === o.value}
             className="swatch"
+            aria-label={o.label}
+            title={o.label}
             onClick={() => onChange(o.value)}
           >
             <span className="swatch__dot" style={{ background: o.color, color: o.mark }}>
@@ -158,7 +160,6 @@ function SwatchRow({ label, value, options, onChange }) {
                 <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
-            <span className="swatch__name">{o.label}</span>
           </button>
         ))}
       </div>
