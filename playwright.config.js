@@ -12,7 +12,11 @@ export default defineConfig({
     // اللقطات المرجعية: سماح يسير لفروق التنعيم بين الأجهزة، ويكشف أي تغيير شكلي حقيقي
     toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: 'disabled', caret: 'hide' },
   },
-  // لقطة واحدة لكل شاشة ومقاس، بلا لاحقة نظام التشغيل (تُقارَن في GitHub بما التُقط هنا)
+  // اللقطات المرجعية تُلتقط وتُقارَن في GitHub وحده (CI): رسم الخطوط يختلف يسيرًا من جهاز إلى جهاز،
+  // فلو قورنت على جهاز آخر لفشلت بلا تغيير حقيقي. وتُحدَّث بسير العمل snapshots.yml (انظر CLAUDE.md).
+  // PW_SNAPSHOTS=1 يفرض المقارنة محليًّا
+  ignoreSnapshots: !process.env.CI && !process.env.PW_SNAPSHOTS,
+  // لقطة واحدة لكل شاشة ومقاس
   snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}-{projectName}{ext}',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

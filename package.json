@@ -13,8 +13,7 @@
     "data": "node scripts/data/00-download.mjs && node scripts/data/01-fetch-lines.mjs && node --no-warnings scripts/data/02-build-mushaf.mjs && node --no-warnings scripts/data/03-build-muyassar.mjs && node --no-warnings scripts/data/04-fetch-mukhtasar.mjs && node --no-warnings scripts/data/05-qcf4.mjs && node --no-warnings scripts/data/06-memos.mjs",
     "test": "npm run build && npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
-    "test:e2e": "playwright test",
-    "test:update-snapshots": "playwright test tests/e2e/screens.spec.js --update-snapshots"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource/amiri": "^5.3.0",

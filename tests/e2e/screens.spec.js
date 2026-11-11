@@ -1,5 +1,5 @@
 // لقطات مرجعية للشاشات الرئيسية، على خلفية فاتحة (بيج) وداكنة (رصاصي)، بمقاسَي الجوال واللابتوب.
-// أي تغيير شكلي غير مقصود يُفشل المقارنة. وتحديثها عن قصد: npm run test:update-snapshots
+// أي تغيير شكلي غير مقصود يُفشل المقارنة في GitHub. وتحديثها عن قصد: التزام فيه [update-snapshots] (snapshots.yml)
 // (وبحسب CLAUDE.md: تُعرض الصورة القديمة والجديدة على صاحب المشروع قبل اعتماد التحديث)
 import { test, expect } from '@playwright/test';
 import { clickDock, clickTopbar, openApp } from './helpers.js';
