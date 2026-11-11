@@ -3,8 +3,9 @@
 // ولكل قارئ مصدر (source) له قالب رابط في "sources" بالملف نفسه: {folder} و{sura} و{ayah}
 // (السورة والآية بثلاث خانات). وتُقرأ البسملة قبل أول كل سورة من ملف الفاتحة ١:١ بصوت القارئ نفسه
 // (src/lib/player.js)، فيلزم أن يكون ملف الآية الأولى من كل سورة بلا بسملة كسائر القرّاء.
-// والأصل أن التلاوة مرتّلة فلا يُكتب تحت اسم القارئ شيء؛ ولا يُضاف "style" إلا لتسجيل مجوّد أو
-// معلّم لقارئ معروف بهما (انظر STYLE_LABELS)، فيظهر بخط صغير تحت اسمه في صفحة الاختيار.
+// ولكل قارئ مجموعة (group) من "groups" في الملف نفسه — مجوّد، معلّم، مرتّل — بها تُقسَم صفحة الاختيار
+// بترتيب "groups"، وفي كل مجموعة بترتيب القرّاء في الملف. ولمجموعة المجوّد والمعلّم إلحاق (suffix) يُكتب
+// بجانب الاسم خارج صفحة الاختيار (نافذة الاستماع وشاشة القفل) لتمييز تسجيلات القارئ الواحد.
 //
 // سجلّ البحث ٢٠٢٦-١١-١٠ (everyayah بمطابقة قائمة ملفات كل مجلد بالآيات الـ٦٢٣٦، وQUL/Tarteel،
 // وquran.com، وalquran.cloud): أُضيف ١٧ قارئًا اختارهم صاحب المشروع، كلهم ٦٢٣٦/٦٢٣٦، وملف الآية
@@ -16,11 +17,13 @@ import data from '../data/reciters.json';
 
 export const RECITERS = data.reciters;
 
-// ما يُكتب بخط صغير تحت اسم القارئ؛ ومن لا "style" له (الأصل: مرتّل) لا يُكتب تحته شيء
-const STYLE_LABELS = { mujawwad: 'مجوّد', muallim: 'المعلّم' };
-export const styleLabel = (r) => STYLE_LABELS[r.style] ?? '';
-// الاسم مع نوع التلاوة إن وُجد، لتمييز تسجيلات القارئ الواحد خارج صفحة الاختيار
-export const reciterTitle = (r) => (styleLabel(r) ? `${r.name} (${styleLabel(r)})` : r.name);
+export const GROUPS = data.groups;
+const groupOf = (r) => GROUPS.find((g) => g.id === r.group) ?? GROUPS.at(-1);
+// القرّاء مقسَّمين إلى مجموعاتهم بالترتيب المطلوب، بلا مجموعة فارغة: [{ id, title, reciters }]
+export const groupReciters = (list) =>
+  GROUPS.map((g) => ({ ...g, reciters: list.filter((r) => groupOf(r) === g) })).filter((g) => g.reciters.length);
+// الاسم مع إلحاق المجموعة إن كان لها إلحاق، لتمييز تسجيلات القارئ الواحد خارج صفحة الاختيار
+export const reciterTitle = (r) => (groupOf(r).suffix ? `${r.name} (${groupOf(r).suffix})` : r.name);
 
 export const reciterById = (id) => RECITERS.find((r) => r.id === id) ?? RECITERS[0];
 

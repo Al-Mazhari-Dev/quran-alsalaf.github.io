@@ -1,11 +1,12 @@
-import { covers, RECITERS, styleLabel } from '../lib/reciters.js';
+import { covers, groupReciters, RECITERS } from '../lib/reciters.js';
 import './ReciterPicker.css';
 import { useLayer } from '../lib/layers.js';
 
 /*
   قائمة اختيار القارئ (الفصل ٦): صفحة كاملة تنزلق من الأسفل، بقائمة قرّاء ودائرة اختيار
-  أمام كلٍّ (على نسق تطبيق «آية»)، بدل قائمة منسدلة صغيرة. وتحت الاسم بخط صغير نوع التلاوة
-  (مجوّد، المعلّم) لمن له ذلك وحده. ويُخفى منها القارئ الذي لا يشمل تسجيله المقدار الحالي.
+  أمام كلٍّ (على نسق تطبيق «آية»)، بدل قائمة منسدلة صغيرة. مقسَّمة إلى مجموعات بعناوين (مجوّد، معلّم،
+  مرتّل) بحسب حقل group في src/data/reciters.json، فلا يُكتب تحت الاسم شيء. ويُخفى منها القارئ الذي لا
+  يشمل تسجيله المقدار الحالي.
 */
 export default function ReciterPicker({ chosen, suras, onPick, onClose }) {
   useLayer(onClose);
@@ -20,25 +21,29 @@ export default function ReciterPicker({ chosen, suras, onPick, onClose }) {
           </svg>
         </button>
       </header>
-      <div className="rcpick__list" role="radiogroup" aria-label="القارئ">
-        {shown.map((r) => (
-          <button
-            key={r.id}
-            type="button"
-            role="radio"
-            aria-checked={r.id === chosen}
-            className="rcpick__row"
-            onClick={() => {
-              onPick(r.id);
-              onClose();
-            }}
-          >
-            <span className="rcpick__text">
-              <span className="rcpick__name">{r.name}</span>
-              {styleLabel(r) && <span className="rcpick__style">{styleLabel(r)}</span>}
-            </span>
-            <span className="rcpick__radio" />
-          </button>
+      <div className="rcpick__list">
+        {groupReciters(shown).map((g) => (
+          <section key={g.id} className="rcpick__group" role="radiogroup" aria-labelledby={`rcpick-${g.id}`}>
+            <h3 id={`rcpick-${g.id}`} className="rcpick__group-title">
+              {g.title}
+            </h3>
+            {g.reciters.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                role="radio"
+                aria-checked={r.id === chosen}
+                className="rcpick__row"
+                onClick={() => {
+                  onPick(r.id);
+                  onClose();
+                }}
+              >
+                <span className="rcpick__name">{r.name}</span>
+                <span className="rcpick__radio" />
+              </button>
+            ))}
+          </section>
         ))}
       </div>
     </div>

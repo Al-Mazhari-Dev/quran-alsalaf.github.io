@@ -68,21 +68,22 @@
   background: var(--accent-soft);
 }
 
-.rcpick__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
 .rcpick__name {
   font-size: var(--text-base);
 }
 
-/* نوع التلاوة تحت الاسم (مجوّد، المعلّم) بخط صغير */
-.rcpick__style {
-  font-size: var(--text-xs);
+/* عنوان المجموعة (مجوّد، معلّم، مرتّل) فوق قرّائها */
+.rcpick__group-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 14px 18px 6px;
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--ink-muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
 }
 
 /* دائرة اختيار فارغة، وتمتلئ بلون التمييز عند الاختيار (كتطبيق «آية») */
