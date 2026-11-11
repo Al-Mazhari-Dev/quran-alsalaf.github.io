@@ -133,12 +133,12 @@ export default function App() {
     if (!shownRef.current.includes(p)) setGotoPage({ page: p, n: Date.now() });
   }, [quran, player.v, player.n]);
 
-  // الإخفات (٢٠٢٦-١١-١١): يتبع مقدار صفحات المحتوى، فيُخفت في المصحف ما خارجه ويزول بإلغائه. وأثناء
-  // الاستماع (تشغيلًا أو إيقافًا مؤقتًا) لا يُخفت شيء، والمميَّز الآية الجارية وحدها بتظليلها
-  const listening = player.status !== 'idle';
+  // الإخفات (٢٠٢٦-١١-١١): يتبع مقدار صفحات المحتوى وحده، فيُخفت في المصحف ما خارجه ويزول بإلغائه،
+  // ولو أثناء الاستماع. ومقدار الاستماع لا يُخفت شيئًا؛ والآية الجارية مظلَّلة، وإن كانت خارج مقدار
+  // صفحات المحتوى بقي نصّها شفافًا وتظليلها خلفه (MushafPage.css)
   const marks = useMemo(
-    () => ({ notes: user.notes, bookmarks: user.bookmarks, range: listening ? null : contentSel, selected: pressed?.v ?? null, playing: player.v }),
-    [user.notes, user.bookmarks, listening, contentSel?.[0], contentSel?.[1], pressed?.v, player.v]
+    () => ({ notes: user.notes, bookmarks: user.bookmarks, range: contentSel, selected: pressed?.v ?? null, playing: player.v }),
+    [user.notes, user.bookmarks, contentSel?.[0], contentSel?.[1], pressed?.v, player.v]
   );
 
   // دخول وضع القراءة من الإعدادات: يُوقَف الصوت بهدوء (الاستماع وتحديد المقدار لا يعملان فيه)،
