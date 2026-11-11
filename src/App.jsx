@@ -12,7 +12,6 @@ import RangePicker from './components/RangePicker.jsx';
 import ListenSheet from './components/ListenSheet.jsx';
 import SideMenu from './components/SideMenu.jsx';
 import SearchOverlay from './components/SearchOverlay.jsx';
-import AboutPage from './components/AboutPage.jsx';
 import { pause, play, resume, retarget, stop, usePlayer } from './lib/player.js';
 import { toArabicDigits } from './data/quran.js';
 import { pageVerses, verseLabel } from './lib/study.js';
@@ -40,7 +39,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sideMenuOpen, setSideMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
+  // صفحة لوحة الإعدادات الظاهرة: الإعدادات نفسها، أو صفحة فرعية فيها («عن التطبيق»)
+  const [settingsPage, setSettingsPage] = useState('main');
   // صفحات المحتوى (تفسير · معاني الكلمات · العمل بالآيات): تُفتح بزرّها في الشريط السفلي —
   // صفحة كاملة في عرض الصفحة الواحدة، ولوحة متمركزة في عرض الصفحتين (الفصل ٥)
   const [studyOpen, setStudyOpen] = useState(false);
@@ -144,7 +144,7 @@ export default function App() {
   // دخول وضع القراءة من الإعدادات: يُوقَف الصوت بهدوء (الاستماع وتحديد المقدار لا يعملان فيه)،
   // ثم يبدأ التدفق من الصفحة الحالية. والخروج يعيد المصحف العادي على الصفحة التي في منتصف الشاشة
   const startReading = () => {
-    setSettingsOpen(false);
+    closeSettings();
     setChromeOpen(false);
     if (player.status !== 'idle') stop();
     setReading(true);
@@ -198,6 +198,63 @@ export default function App() {
       if (window.history.state?.hqStudy) return;
       setStudyOpen(false);
       setPicking((p) => (p?.target === 'content' ? null : p));
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  // لوحة الإعدادات (يسارًا) والقائمة الجانبية (يمينًا) لا تُفتحان معًا: فتح إحداهما يغلق الأخرى.
+  // فتح الإعدادات يضيف خطوة إلى سجل المتصفح (وصفحتها الفرعية خطوة ثانية)، فزرّ الرجوع في أندرويد
+  // يرجع من «عن التطبيق» إلى الإعدادات ثم يغلقها. وكل إغلاق آخر (✕، النقر خارجها، السحب، Esc)
+  // يرجع في السجل بقدر خطواتها
+  const openSettings = useCallback(() => {
+    setSideMenuOpen(false);
+    setChromeOpen(false);
+    setSettingsPage('main');
+    setSettingsOpen(true);
+    try {
+      if (!window.history.state?.hqSettings) window.history.pushState({ hqSettings: 1 }, '');
+    } catch {
+      // بلا سجل (نادر): تُغلق بأزرارها وحدها
+    }
+  }, []);
+  const closeSettings = useCallback(() => {
+    const depth = window.history.state?.hqSettings;
+    if (depth) window.history.go(-depth);
+    else {
+      setSettingsOpen(false);
+      setSettingsPage('main');
+    }
+  }, []);
+  const showSettingsPage = useCallback((next) => {
+    const depth = window.history.state?.hqSettings;
+    if (next === 'main') {
+      if (depth === 2) window.history.back();
+      else setSettingsPage('main');
+      return;
+    }
+    setSettingsPage(next);
+    try {
+      if (depth === 1) window.history.pushState({ hqSettings: 2 }, '');
+    } catch {
+      // بلا سجل: سهم الرجوع وحده
+    }
+  }, []);
+  const openSideMenu = useCallback(() => {
+    if (window.history.state?.hqSettings) window.history.go(-window.history.state.hqSettings);
+    setSettingsOpen(false);
+    setSettingsPage('main');
+    setSideMenuOpen(true);
+  }, []);
+  useEffect(() => {
+    if (window.history.state?.hqSettings) window.history.replaceState(null, '');
+    const onPop = () => {
+      const depth = window.history.state?.hqSettings;
+      if (depth === 1) setSettingsPage('main');
+      else if (!depth) {
+        setSettingsOpen(false);
+        setSettingsPage('main');
+      }
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -314,7 +371,7 @@ export default function App() {
 
   // ما دامت فوق المصحف صفحة أو قائمة أو بطاقة، فهو خارج التركيز ولوحة المفاتيح (inert)
   const covered =
-    studyOpen || settingsOpen || sideMenuOpen || searchOpen || aboutOpen || !!pressed || !!picking || listenOpen;
+    studyOpen || settingsOpen || sideMenuOpen || searchOpen || !!pressed || !!picking || listenOpen;
   const chromeShown = chromeOpen && !covered;
 
   return (
@@ -334,7 +391,7 @@ export default function App() {
           inert={chromeShown ? undefined : ''}
         >
           {/* أيقونة القائمة الجانبية أعلى اليمين (الفصل ٧): فهرس السور، الملاحظات، العلامات */}
-          <button className="topbar__icon" type="button" onClick={() => setSideMenuOpen(true)} disabled={!quran} aria-label="القائمة">
+          <button className="topbar__icon" type="button" onClick={openSideMenu} disabled={!quran} aria-label="القائمة">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
             </svg>
@@ -349,8 +406,8 @@ export default function App() {
             <span>بحث في المصحف</span>
           </button>
 
-          {/* الإعدادات، وفيها تبديل الوضع الفاتح والداكن (بطلب صاحب المشروع) */}
-          <button className="topbar__icon" type="button" onClick={() => setSettingsOpen(true)} aria-label="الإعدادات">
+          {/* الإعدادات أعلى اليسار مقابل القائمة: لوحة جانبية من اليسار، وفيها تبديل الوضع الفاتح والداكن */}
+          <button className="topbar__icon" type="button" onClick={openSettings} aria-label="الإعدادات">
             <SettingsIcon />
           </button>
         </header>
@@ -436,16 +493,14 @@ export default function App() {
 
       <SettingsSheet
         open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        panel={spread}
+        page={settingsPage}
+        onPage={showSettingsPage}
+        onClose={closeSettings}
         onStartReading={startReading}
-        onShowAbout={() => {
-          setSettingsOpen(false);
-          setAboutOpen(true);
-        }}
       />
       {quran && <SideMenu quran={quran} open={sideMenuOpen} onGoto={gotoPageNumber} onClose={() => setSideMenuOpen(false)} />}
       {quran && searchOpen && <SearchOverlay quran={quran} onGoto={gotoPageNumber} onClose={() => setSearchOpen(false)} />}
-      <AboutPage open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <div
         className={`study-backdrop${studyOpen && spread ? ' study-backdrop--open' : ''}`}
         onClick={closeStudy}
