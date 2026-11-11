@@ -68,8 +68,21 @@
   background: var(--accent-soft);
 }
 
+.rcpick__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .rcpick__name {
   font-size: var(--text-base);
+}
+
+/* نوع التلاوة تحت الاسم (مجوّد، المعلّم) بخط صغير */
+.rcpick__style {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
 }
 
 /* دائرة اختيار فارغة، وتمتلئ بلون التمييز عند الاختيار (كتطبيق «آية») */

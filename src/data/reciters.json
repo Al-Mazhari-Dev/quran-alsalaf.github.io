@@ -1,6 +1,7 @@
 {
   "sources": {
-    "everyayah": "https://everyayah.com/data/{folder}/{sura}{ayah}.mp3"
+    "everyayah": "https://everyayah.com/data/{folder}/{sura}{ayah}.mp3",
+    "tarteel": "https://audio-cdn.tarteel.ai/quran/{folder}/{sura}{ayah}.mp3"
   },
   "reciters": [
     { "id": "shuraym", "name": "سعود الشريم", "source": "everyayah", "folder": "Saood_ash-Shuraym_128kbps" },
@@ -19,6 +20,23 @@
     { "id": "matroud", "name": "عبد الله المطرود", "source": "everyayah", "folder": "Abdullah_Matroud_128kbps" },
     { "id": "jaber", "name": "علي جابر", "source": "everyayah", "folder": "Ali_Jaber_64kbps" },
     { "id": "ghamdi", "name": "سعد الغامدي", "source": "everyayah", "folder": "Ghamadi_40kbps" },
-    { "id": "tunaiji", "name": "خليفة الطنيجي", "source": "everyayah", "folder": "khalefa_al_tunaiji_64kbps" }
+    { "id": "tunaiji", "name": "خليفة الطنيجي", "source": "everyayah", "folder": "khalefa_al_tunaiji_64kbps" },
+    { "id": "sudais", "name": "عبد الرحمن السديس", "source": "everyayah", "folder": "Abdurrahmaan_As-Sudais_192kbps" },
+    { "id": "basfar", "name": "عبد الله بصفر", "source": "everyayah", "folder": "Abdullah_Basfar_192kbps" },
+    { "id": "rifai", "name": "هاني الرفاعي", "source": "everyayah", "folder": "Hani_Rifai_192kbps" },
+    { "id": "budair", "name": "صلاح البدير", "source": "everyayah", "folder": "Salah_Al_Budair_128kbps" },
+    { "id": "qasim", "name": "محسن القاسم", "source": "everyayah", "folder": "Muhsin_Al_Qasim_192kbps" },
+    { "id": "abbad", "name": "فارس عباد", "source": "everyayah", "folder": "Fares_Abbad_64kbps" },
+    { "id": "ajamy", "name": "أحمد بن علي العجمي", "source": "everyayah", "folder": "ahmed_ibn_ali_al_ajamy_128kbps" },
+    { "id": "bukhatir", "name": "صلاح بو خاطر", "source": "everyayah", "folder": "Salaah_AbdulRahman_Bukhatir_128kbps" },
+    { "id": "tablawi", "name": "محمد محمود الطبلاوي", "source": "everyayah", "folder": "Mohammad_al_Tablaway_128kbps" },
+    { "id": "nufais", "name": "أحمد النفيس", "source": "tarteel", "folder": "alnufais" },
+    { "id": "abdulbasit-mujawwad", "name": "عبد الباسط عبد الصمد", "source": "everyayah", "folder": "Abdul_Basit_Mujawwad_128kbps", "style": "mujawwad" },
+    { "id": "husary-mujawwad", "name": "محمود خليل الحصري", "source": "everyayah", "folder": "Husary_128kbps_Mujawwad", "style": "mujawwad" },
+    { "id": "minshawi-mujawwad", "name": "محمد صديق المنشاوي", "source": "everyayah", "folder": "Minshawy_Mujawwad_192kbps", "style": "mujawwad" },
+    { "id": "husary-muallim", "name": "محمود خليل الحصري", "source": "everyayah", "folder": "Husary_Muallim_128kbps", "style": "muallim" },
+    { "id": "minshawi-muallim", "name": "محمد صديق المنشاوي", "source": "everyayah", "folder": "Minshawy_Teacher_128kbps", "style": "muallim" },
+    { "id": "sowaid", "name": "أيمن سويد", "source": "everyayah", "folder": "Ayman_Sowaid_64kbps" },
+    { "id": "salamah", "name": "ياسر سلامة", "source": "everyayah", "folder": "Yaser_Salamah_128kbps" }
   ]
 }

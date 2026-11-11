@@ -1,11 +1,11 @@
-import { covers, RECITERS } from '../lib/reciters.js';
+import { covers, RECITERS, styleLabel } from '../lib/reciters.js';
 import './ReciterPicker.css';
 import { useLayer } from '../lib/layers.js';
 
 /*
   قائمة اختيار القارئ (الفصل ٦): صفحة كاملة تنزلق من الأسفل، بقائمة قرّاء ودائرة اختيار
-  أمام كلٍّ (على نسق تطبيق «آية»)، بدل قائمة منسدلة صغيرة. وأحمد بن طالب يُخفى منها متى
-  اشتمل المقدار الحالي على سورة لم يُرفع تسجيلها.
+  أمام كلٍّ (على نسق تطبيق «آية»)، بدل قائمة منسدلة صغيرة. وتحت الاسم بخط صغير نوع التلاوة
+  (مجوّد، المعلّم) لمن له ذلك وحده. ويُخفى منها القارئ الذي لا يشمل تسجيله المقدار الحالي.
 */
 export default function ReciterPicker({ chosen, suras, onPick, onClose }) {
   useLayer(onClose);
@@ -33,7 +33,10 @@ export default function ReciterPicker({ chosen, suras, onPick, onClose }) {
               onClose();
             }}
           >
-            <span className="rcpick__name">{r.name}</span>
+            <span className="rcpick__text">
+              <span className="rcpick__name">{r.name}</span>
+              {styleLabel(r) && <span className="rcpick__style">{styleLabel(r)}</span>}
+            </span>
             <span className="rcpick__radio" />
           </button>
         ))}

@@ -95,11 +95,10 @@ export default function App() {
       : spread
         ? `الصفحتان ${toArabicDigits(shownPages[0])}–${toArabicDigits(shownPages[1])}`
         : `الصفحة ${toArabicDigits(page)}`);
-  const startListening = async () => {
-    const result = await play(quran, range);
-    if (result === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
-    else if (result === 'ok') setListenOpen(false);
-    // 'failed': رسالة الخطأ تظهر من التأثير أعلاه (player.error). 'cancelled': تجاوزه طلب أحدث.
+  const startListening = () => {
+    // play() ترجع 'unsupported' أو 'playing' (src/lib/player.js)، ونافذة الاستماع تبقى مفتوحة كما كانت
+    if (play(quran, range) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
+    // أخطاء التشغيل نفسه تظهر من التأثير أدناه (player.error)
   };
   useEffect(() => {
     if (player.error) showToast(player.error.text);

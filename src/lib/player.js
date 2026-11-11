@@ -10,7 +10,7 @@
 //     بصوت القارئ نفسه
 //   • التشغيل في الخلفية وأزرار شاشة القفل عبر Media Session
 import { useSyncExternalStore } from 'react';
-import { ayahUrl, covers, reciterById } from './reciters.js';
+import { ayahUrl, covers, reciterById, reciterTitle } from './reciters.js';
 
 const KEY = 'hq.listen';
 // ١ (بدون تكرار) يُعرض بعبارته لا رقمه؛ فالقائمة العددية تبدأ من ٢ (بطلب صاحب المشروع)
@@ -163,12 +163,12 @@ export function isDownloaded(q, verses) {
   return resourcesFor(verses).every((f) => blobUrls.has(f));
 }
 
-// يبدأ الاستماع لآيات verses فورًا: من ملف منزَّل إن وُجد، وإلا بثًّا مباشرًا.
-// النتيجة: false إن كان القارئ المختار لا يشمل تسجيلُه موضعها
+// يبدأ الاستماع لآيات verses فورًا: من ملف منزَّل إن وُجد، وإلا بثًّا مباشرًا. النتيجة:
+// 'unsupported' (القارئ المختار لا يشمل تسجيلُه موضعها، كما في downloadRange) · 'playing'
 export function play(q, verses) {
   quran = q;
   const r = reciterById(state.settings.reciter);
-  if (!covers(r, suraList(verses))) return false;
+  if (!covers(r, suraList(verses))) return 'unsupported';
   ++gen;
   queue = verses;
   pos = 0;
@@ -176,7 +176,7 @@ export function play(q, verses) {
   rangeRep = 0;
   set({ error: null });
   startVerse(true);
-  return true;
+  return 'playing';
 }
 
 const suraList = (verses) => [...new Set(verses.map((v) => quran.verses[v].s))];
@@ -275,8 +275,10 @@ export function setSettings(patch) {
       stop();
       return false;
     }
+    // نفس الموضع بصوت القارئ الجديد: البسملة إن كانت هي الجارية، وإلا الآية نفسها
+    const inBasmala = !!seg?.basmala;
     seg = null;
-    startVerse(false);
+    startVerse(inBasmala);
   }
   return true;
 }
@@ -306,7 +308,7 @@ function updateMetadata() {
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: `سورة ${quran.suras[verse.s - 1].name} — الآية ${verse.a}`,
-      artist: r.name,
+      artist: reciterTitle(r),
       album: 'قرآن السلف',
       artwork: [{ src: `${import.meta.env.BASE_URL}icons/icon-512.png`, sizes: '512x512', type: 'image/png' }],
     });
