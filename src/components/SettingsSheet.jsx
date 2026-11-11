@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { readTheme, toggleTheme } from '../lib/theme.js';
+import { ACCENTS, BACKGROUNDS, readAppearance, setAccent, setBackground } from '../lib/appearance.js';
 import { readWeeksTint, setWeeksTint } from '../lib/settings.js';
 import AboutContent from './AboutPage.jsx';
 import './SettingsSheet.css';
@@ -14,7 +14,8 @@ import { useLayer } from '../lib/layers.js';
   «عن التطبيق» صفحة فرعية داخل اللوحة نفسها بسهم رجوع.
 
   إضافة إعداد أو ميزة جديدة: سطر في قسمه بأحد الأسطر الجاهزة أدناه
-  (SegmentRow للاختيار من خيارات، SwitchRow للتشغيل والإيقاف، LinkRow لما يفتح شيئًا)،
+  (SegmentRow للاختيار من خيارات، SwatchRow للاختيار من ألوان، SwitchRow للتشغيل والإيقاف،
+  LinkRow لما يفتح شيئًا)،
   أو قسم جديد بـ<Section title="…">. (حجم خط التطبيق أُلغي ٢٠٢٦-٠٩-٢٥ بطلب صاحب المشروع)
 */
 
@@ -23,20 +24,19 @@ const DRAG_START = 8;
 const CLOSE_RATIO = 0.3;
 const FLING_SPEED = 0.5; // px/ms
 
-export default function SettingsSheet({ open, panel, page = 'main', onPage, onClose, onThemeChange, onStartReading }) {
-  const [theme, setThemeState] = useState(readTheme);
+export default function SettingsSheet({ open, panel, page = 'main', onPage, onClose, onStartReading }) {
+  const [look, setLook] = useState(readAppearance);
   const [weeks, setWeeks] = useState(readWeeksTint);
   const sub = page !== 'main';
 
   // Esc في الصفحة الفرعية يرجع إلى الإعدادات، وفي الإعدادات يغلق اللوحة
   useLayer(() => (sub ? onPage('main') : onClose()), open);
 
-  const chooseTheme = (t) => {
-    if (t === readTheme()) return;
-    const next = toggleTheme();
-    setThemeState(next);
-    onThemeChange?.(next);
-  };
+  // المظهر يُطبَّق فورًا ويُحفظ محليًّا (src/lib/appearance.js)
+  const chooseBackground = (id) => setLook(setBackground(id));
+  const chooseAccent = (id) => setLook(setAccent(id));
+  // دوائر «لون التطبيق» بالدرجة التي ستظهر فعلًا على الخلفية المختارة
+  const darkBg = BACKGROUNDS.find((b) => b.id === look.bg)?.dark;
 
   const toggleWeeks = () => {
     setWeeksTint(!weeks);
@@ -61,14 +61,17 @@ export default function SettingsSheet({ open, panel, page = 'main', onPage, onCl
 
           <div className="settings__body">
             <Section title="المظهر">
-              <SegmentRow
-                label="الوضع"
-                value={theme}
-                options={[
-                  { value: 'light', label: 'فاتح' },
-                  { value: 'dark', label: 'داكن' },
-                ]}
-                onChange={chooseTheme}
+              <SwatchRow
+                label="خلفية القراءة"
+                value={look.bg}
+                options={BACKGROUNDS.map((b) => ({ value: b.id, label: b.name, color: b.bg, mark: b.ink }))}
+                onChange={chooseBackground}
+              />
+              <SwatchRow
+                label="لون التطبيق"
+                value={look.accent}
+                options={ACCENTS.map((a) => ({ value: a.id, label: a.name, color: darkBg ? a.dark : a.light }))}
+                onChange={chooseAccent}
               />
             </Section>
 
@@ -122,6 +125,40 @@ function SegmentRow({ label, value, options, onChange }) {
         {options.map((o) => (
           <button key={o.value} type="button" role="radio" aria-checked={value === o.value} onClick={() => onChange(o.value)}>
             {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// صفّ دوائر ملوّنة وأسماؤها تحتها. والمختارة بحلقة بلون التطبيق وعلامة صح؛ و`mark` لون علامة الصح
+// إن لم تكن بلون نص الزر الملوّن (في دوائر الخلفيات: بلون نص المصحف عليها)
+function SwatchRow({ label, value, options, onChange }) {
+  return (
+    <div className="settings__row settings__row--stack">
+      <span className="settings__label">{label}</span>
+      <div
+        className="swatches"
+        role="radiogroup"
+        aria-label={label}
+        style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+      >
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={value === o.value}
+            className="swatch"
+            onClick={() => onChange(o.value)}
+          >
+            <span className="swatch__dot" style={{ background: o.color, color: o.mark }}>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span className="swatch__name">{o.label}</span>
           </button>
         ))}
       </div>

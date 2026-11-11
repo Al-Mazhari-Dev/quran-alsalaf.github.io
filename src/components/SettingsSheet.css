@@ -224,6 +224,82 @@
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
 }
 
+/* صفّ دوائر الألوان (المظهر): العنوان فوق، والدوائر بأسمائها تحته بعرض السطر */
+.settings__row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.swatches {
+  display: grid;
+  gap: 4px;
+}
+
+.swatch {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px 0;
+}
+
+.swatch__dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  /* حدّ خفيف يُبين الدائرة إن كان لونها قريبًا من خلفية اللوحة */
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.14), 0 0 0 0 var(--accent);
+  color: var(--accent-ink);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+:root[data-theme='dark'] .swatch__dot {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.22), 0 0 0 0 var(--accent);
+}
+
+.swatch__dot svg {
+  width: 20px;
+  height: 20px;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+/* المختارة: حلقة بلون التطبيق حولها بفاصل بلون اللوحة، وعلامة صح */
+.swatch[aria-checked='true'] .swatch__dot,
+:root[data-theme='dark'] .swatch[aria-checked='true'] .swatch__dot {
+  box-shadow: inset 0 0 0 1px rgb(128 128 128 / 0.25), 0 0 0 3px var(--bg), 0 0 0 5px var(--accent);
+}
+
+.swatch[aria-checked='true'] .swatch__dot svg {
+  opacity: 1;
+  transform: none;
+}
+
+.swatch__name {
+  max-width: 100%;
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+.swatch[aria-checked='true'] .swatch__name {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .swatch:hover .swatch__dot {
+    transform: scale(1.06);
+  }
+}
+
 /* مفتاح تشغيل/إيقاف: الدائرة تبدأ يمينًا (مطفأ) وتنتقل يسارًا عند التشغيل، كاتجاه القراءة */
 .settings__switch {
   flex: none;

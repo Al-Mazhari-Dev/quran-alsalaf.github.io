@@ -1,33 +1,58 @@
 /*
-  الألوان الثلاثة الأساسية مستخرجة بدقة بكسل من ملف كافي، كما نصّت المواصفة:
-    الخلفية #FFFFFF · الحبر #323235 · اللون المميز #0096E3
-  وبقية الدرجات مشتقّة منها لا مخترَعة، ليبقى النظام اللوني متماسكًا.
+  الألوان (٢٠٢٦-١١-١١): ثلاثة أساسٍ فقط تأتي من اختيار المستخدم، ويضبطها سكربت index.html على الجذر
+  قبل الرسم من قائمتي src/data/appearance.json:
+    --bg      خلفية القراءة (خلفية المصحف وكل التطبيق)
+    --ink     نص المصحف ونص الواجهة
+    --accent  لون التطبيق، بدرجته المناسبة لنوع الخلفية
+  ومعها data-theme: 'light' للخلفيتين الفاتحتين و'dark' للداكنتين.
+
+  وكل ما سواها مشتق منها هنا، لا مكتوب يدويًّا:
+    • البطاقات والقوائم والأزرار والصفحات الفرعية (--surface*): في الفاتحة أغمق قليلًا من الخلفية
+      (مزج بالأسود)، وفي الداكنة طبقة بيضاء شفافة خفيفة فوقها (مزج بالأبيض). وكذلك الحدود.
+    • النصوص الثانوية: الحبر ممزوجًا بالخلفية.
+    • التظليل (الآية الجارية، المحدَّد، الخلفيات الخفيفة): درجة شفافة من لون التطبيق نفسه.
+  والمقادير وحدها تختلف بين الفاتح والداكن (أدناه).
 */
 
 :root {
-  /* ===== الوضع النهاري ===== */
-  --bg: #ffffff;
-  --surface: #f7f7f8;
-  --surface-2: #eeeef1;
-  --surface-3: #e6e6ea;
+  /* ===== مقادير الاشتقاق: الخلفيات الفاتحة ===== */
+  --layer: #000;
+  --k-surface: 3%;
+  --k-surface-2: 5.5%;
+  --k-surface-3: 8.5%;
+  --k-border: 11%;
+  --k-border-strong: 18%;
+  --k-muted: 74%;
+  --k-faint: 52%;
+  --k-soft: 10%;
+  --k-soft-strong: 17%;
+  --k-week: 16%;
 
-  --ink: #323235;
-  --ink-muted: #6b6b73;
-  --ink-faint: #9b9ba3;
+  /* ===== المشتق (لا يُعدَّل باليد) ===== */
+  --surface: color-mix(in srgb, var(--bg), var(--layer) var(--k-surface));
+  --surface-2: color-mix(in srgb, var(--bg), var(--layer) var(--k-surface-2));
+  --surface-3: color-mix(in srgb, var(--bg), var(--layer) var(--k-surface-3));
 
-  --border: #e3e3e8;
-  --border-strong: #d2d2d9;
+  --ink-muted: color-mix(in srgb, var(--ink) var(--k-muted), var(--bg));
+  --ink-faint: color-mix(in srgb, var(--ink) var(--k-faint), var(--bg));
 
-  --accent: #1a0165;
-  --accent-ink: #ffffff;
-  --accent-soft: rgba(26, 1, 101, 0.08);
-  --accent-soft-strong: rgba(26, 1, 101, 0.14);
+  --border: color-mix(in srgb, var(--bg), var(--layer) var(--k-border));
+  --border-strong: color-mix(in srgb, var(--bg), var(--layer) var(--k-border-strong));
 
-  /* خلفية مقرر الأسبوع الملوّن في صفحة المصحف: خفيفة لا تنافس الحبر */
-  --week-tint: rgba(254, 125, 27, 0.09);
+  /* النص فوق زرٍّ بلون التطبيق: أبيض فوق الدرجات الغامقة (للخلفيات الفاتحة) */
+  --accent-ink: #fff;
+  --accent-soft: color-mix(in srgb, var(--accent) var(--k-soft), transparent);
+  --accent-soft-strong: color-mix(in srgb, var(--accent) var(--k-soft-strong), transparent);
 
-  --shadow-card: 0 1px 2px rgba(50, 50, 53, 0.05), 0 8px 24px rgba(50, 50, 53, 0.08);
-  --shadow-float: 0 2px 6px rgba(50, 50, 53, 0.08), 0 16px 40px rgba(50, 50, 53, 0.14);
+  /* ألوان الحالة (تحذير، تم التنزيل): ليست من لون التطبيق، ولها درجة فاتحة للخلفيات الداكنة */
+  --danger: #c0392b;
+  --success: #276c2b;
+
+  /* خلفية مقرر الأسبوع الملوّن في صفحة المصحف: برتقالي الهوية، خفيف لا ينافس الحبر */
+  --week-tint: color-mix(in srgb, #fe7d1b var(--k-week), transparent);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-float: 0 2px 6px rgba(0, 0, 0, 0.08), 0 16px 40px rgba(0, 0, 0, 0.14);
 
   /* ===== الخطوط ===== */
   --font-ui: 'Amiri', 'Rubik', system-ui, 'Segoe UI', Tahoma, sans-serif;
@@ -63,28 +88,26 @@
   color-scheme: light;
 }
 
-/* ===== الوضع الليلي =====
-   يشمل صفحة المصحف نفسها، لا القوائم فقط (نصّ المواصفة، الفصل ٩).
-   خلفية مائلة للدفء لا سوداء صرفة، لأن السواد الصرف يُتعب العين في القراءة الطويلة. */
+/* ===== مقادير الاشتقاق: الخلفيات الداكنة =====
+   طبقة بيضاء شفافة فوق الخلفية بدل التغميق، وتظليل أوضح قليلًا لأن الدرجات الشفافة تخفت على الداكن. */
 :root[data-theme='dark'] {
-  --bg: #14141a;
-  --surface: #1c1c23;
-  --surface-2: #24242c;
-  --surface-3: #2d2d36;
+  --layer: #fff;
+  --k-surface: 6%;
+  --k-surface-2: 9.5%;
+  --k-surface-3: 13%;
+  --k-border: 13%;
+  --k-border-strong: 21%;
+  --k-muted: 70%;
+  --k-faint: 48%;
+  --k-soft: 16%;
+  --k-soft-strong: 26%;
+  --k-week: 15%;
 
-  --ink: #e9e9ee;
-  --ink-muted: #a2a2ad;
-  --ink-faint: #74747f;
+  /* النص فوق زرٍّ بلون التطبيق: شبه أسود فوق الدرجات الفاتحة (للخلفيات الداكنة) */
+  --accent-ink: #111;
 
-  --border: #2b2b34;
-  --border-strong: #3a3a45;
-
-  --accent: #38b0f2;
-  --accent-ink: #08131b;
-  --accent-soft: rgba(56, 176, 242, 0.12);
-  --accent-soft-strong: rgba(56, 176, 242, 0.2);
-
-  --week-tint: rgba(255, 148, 64, 0.1);
+  --danger: #ff8a80;
+  --success: #81c995;
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.36);
   --shadow-float: 0 2px 6px rgba(0, 0, 0, 0.45), 0 16px 40px rgba(0, 0, 0, 0.5);
@@ -95,7 +118,7 @@
 /*
   لا توجد هنا قاعدة تتبع إعداد النظام عمدًا.
   إعداد النظام يُستشار مرة واحدة فقط، عند أول فتحة للتطبيق، في السكربت
-  الذي يسبق الرسم داخل index.html — فيُثبِّت الوضع سمةً على الجذر ويحفظه.
+  الذي يسبق الرسم داخل index.html — فيختار الخلفية (بيج أو رصاصي) ويحفظها.
   وبعدها لا يتغير إلا بيد المستخدم. فلو وُضعت هنا قاعدة تتبع النظام
   لناقضت ذلك وغلبت اختياره متى بدّل نظام جهازه.
 */

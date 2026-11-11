@@ -7,7 +7,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="theme-color" content="#F5EDDC" />
     <meta name="description" content="إنشاء: سامي أبصار الإسلام" />
 
     <!-- تشغيل بملء الشاشة عند التثبيت على آيفون -->
@@ -21,33 +21,74 @@
 
     <script>
       /*
-        يُطبَّق وضع العرض قبل رسم الصفحة، لئلا تومض بلونٍ ثم تنقلب إلى آخر.
-        ولهذا هو هنا مكتوبًا داخل الصفحة، لا في ملف يُحمَّل بعدها.
+        المظهر (٢٠٢٦-١١-١١): «خلفية القراءة» و«لون التطبيق». يُطبَّق هنا قبل رسم الصفحة لئلا تومض
+        بلونٍ ثم تنقلب إلى آخر، ولهذا هو مكتوب داخل الصفحة لا في ملف يُحمَّل بعدها.
 
-        القاعدة (بطلب صاحب المشروع):
-          • الخياران فاتح وداكن فقط، بلا خيار ثالث يتبع النظام.
-          • عند أول فتحة على الإطلاق فقط، يُنظر إلى إعداد نظام الجهاز
-            فيُتَّخذ وضعًا افتدائيًّا، ثم يُحفظ فورًا.
-          • بعدها يبقى اختيار المستخدم هو المعتمد دائمًا، ولو تغيّر
-            إعداد النظام — فالمتابعة التلقائية تقع مرة واحدة لا باستمرار.
+        القائمتان في src/data/appearance.json وحدها، ويحقنها vite.config.js هنا مكان
+        __APPEARANCE_DATA__ وقت البناء والتطوير. ولا يُضبط هنا إلا الأساس: الخلفية، ونص المصحف،
+        واللون الثانوي بدرجته المناسبة، ونوع الخلفية (data-theme: light أو dark)؛ وكل لون فرعي
+        (البطاقات والحدود والنصوص الثانوية والتظليل) يُشتق منها في src/styles/tokens.css.
+
+        • أول فتح: خلفية «رصاصي» إن كان الجهاز على الوضع الداكن، وإلا «بيج»؛ واللون «أزرق».
+        • من اختار سابقًا الوضع الداكن (hq.theme) ينتقل إلى «رصاصي»، والفاتح إلى «بيج».
+        • بعدها يبقى اختيار المستخدم هو المعتمد ولو تغيّر إعداد النظام.
+        وsrc/lib/appearance.js يستعمل apply نفسها عند التبديل من الإعدادات.
       */
       (function () {
-        var KEY = 'hq.theme';
-        var theme;
-        try {
-          theme = localStorage.getItem(KEY);
-        } catch (e) {}
+        var DATA = __APPEARANCE_DATA__;
+        var BG_KEY = 'hq.bg';
+        var ACCENT_KEY = 'hq.accent';
 
-        if (theme !== 'light' && theme !== 'dark') {
-          theme = window.matchMedia('(prefers-color-scheme: dark)').matches
-            ? 'dark'
-            : 'light';
-          try {
-            localStorage.setItem(KEY, theme);
-          } catch (e) {}
+        function find(list, id) {
+          for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+          return null;
+        }
+        function get(key) {
+          try { return localStorage.getItem(key); } catch (e) { return null; }
+        }
+        function set(key, value) {
+          try { localStorage.setItem(key, value); } catch (e) {}
         }
 
-        document.documentElement.setAttribute('data-theme', theme);
+        function apply(bgId, accentId) {
+          var bg = find(DATA.backgrounds, bgId) || find(DATA.backgrounds, DATA.defaults.light);
+          var accent = find(DATA.accents, accentId) || find(DATA.accents, DATA.defaults.accent);
+          var root = document.documentElement;
+          root.setAttribute('data-theme', bg.dark ? 'dark' : 'light');
+          root.setAttribute('data-bg', bg.id);
+          root.setAttribute('data-accent', accent.id);
+          root.style.setProperty('--bg', bg.bg);
+          root.style.setProperty('--ink', bg.ink);
+          root.style.setProperty('--accent', bg.dark ? accent.dark : accent.light);
+          // شريط حالة الجوال بلون الخلفية المختارة
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (!meta) {
+            meta = document.createElement('meta');
+            meta.name = 'theme-color';
+            document.head.appendChild(meta);
+          }
+          meta.content = bg.bg;
+          return { bg: bg.id, accent: accent.id };
+        }
+
+        var bgId = get(BG_KEY);
+        if (!find(DATA.backgrounds, bgId)) {
+          var old = get('hq.theme');
+          var dark = old === 'dark' || old === 'light'
+            ? old === 'dark'
+            : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          bgId = dark ? DATA.defaults.dark : DATA.defaults.light;
+          set(BG_KEY, bgId);
+          try { localStorage.removeItem('hq.theme'); } catch (e) {}
+        }
+        var accentId = get(ACCENT_KEY);
+        if (!find(DATA.accents, accentId)) {
+          accentId = DATA.defaults.accent;
+          set(ACCENT_KEY, accentId);
+        }
+
+        apply(bgId, accentId);
+        window.hqAppearance = { data: DATA, apply: apply, BG_KEY: BG_KEY, ACCENT_KEY: ACCENT_KEY };
       })();
     </script>
     <style>
