@@ -1,0 +1,20 @@
+{
+  "backgrounds": [
+    { "id": "white", "name": "أبيض", "bg": "#FFFFFF", "ink": "#323235", "dark": false },
+    { "id": "beige", "name": "بيج", "bg": "#F5EDDC", "ink": "#2E2A24", "dark": false },
+    { "id": "gray", "name": "رصاصي", "bg": "#2B2B2E", "ink": "#E8E6E1", "dark": true },
+    { "id": "black", "name": "أسود", "bg": "#000000", "ink": "#D6D3CC", "dark": true }
+  ],
+  "accents": [
+    { "id": "blue", "name": "أزرق", "light": "#0A6FAD", "dark": "#5CB4EE" },
+    { "id": "emerald", "name": "أخضر زمردي", "light": "#2A7350", "dark": "#6CC59A" },
+    { "id": "amber", "name": "ذهبي عنبري", "light": "#8A6110", "dark": "#E2B65A" },
+    { "id": "maroon", "name": "عنّابي", "light": "#8C2F3C", "dark": "#E8939D" },
+    { "id": "mauve", "name": "موف", "light": "#6A4C9C", "dark": "#B9A2E0" }
+  ],
+  "defaults": { "light": "beige", "dark": "gray", "accent": "blue" },
+  "mix": {
+    "light": { "surface": 3, "surface-2": 5.5, "surface-3": 8.5, "border": 11, "border-strong": 18, "muted": 74, "faint": 52, "soft": 10, "soft-strong": 17, "week-a": 7, "week-b": 15, "playing": 38, "decor-fill": 22, "decor-dot": 30 },
+    "dark": { "surface": 6, "surface-2": 9.5, "surface-3": 13, "border": 13, "border-strong": 21, "muted": 70, "faint": 48, "soft": 16, "soft-strong": 26, "week-a": 10, "week-b": 19, "playing": 39, "decor-fill": 36, "decor-dot": 30 }
+  }
+}

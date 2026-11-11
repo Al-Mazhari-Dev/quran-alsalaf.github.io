@@ -204,7 +204,7 @@
 .searchov__verseRef {
   font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .searchov__verseText {

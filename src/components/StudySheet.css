@@ -92,7 +92,7 @@
 }
 
 .study__tab[aria-selected='true'] {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
   border-bottom-color: var(--accent);
 }
@@ -190,7 +190,7 @@
   text-align: center;
   font-size: var(--text-base);
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* بطاقة الآية، وتحتها مباشرة بطاقة الشرح بلون أفتح (مرجع «آية») */
@@ -208,7 +208,7 @@
   margin: 0 0 4px;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .study__box ul {
@@ -260,7 +260,7 @@
 
 .study__quote {
   font-family: var(--font-quran);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .study__ref {
@@ -301,7 +301,7 @@
   font-size: 1.15rem;
   font-weight: normal;
   line-height: 2;
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--surface-2);
   border-inline-end: 1px solid var(--border);
 }
@@ -360,7 +360,7 @@
   padding: 10px 14px;
   border-radius: var(--r-md);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: var(--text-sm);
   font-weight: 600;
   text-decoration: none;

@@ -109,7 +109,8 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
         const note = isEnd && marks?.notes?.[v];
         const bookmark = isEnd ? bookmarkOf.get(v) : undefined;
         let cls = 'w';
-        if (weeks.tinted(v)) cls += ' w--week';
+        const week = weeks.shade(v);
+        if (week) cls += ` w--week w--week-${week}`;
         if (outside(v)) cls += ' w--out';
         if (marks?.selected === v) cls += ' w--selected';
         else if (marks?.playing === v) cls += ' w--playing';

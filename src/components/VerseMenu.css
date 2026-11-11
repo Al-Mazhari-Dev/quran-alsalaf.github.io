@@ -55,7 +55,7 @@
 .vmenu__action svg {
   width: 24px;
   height: 24px;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* بطاقة المحتوى العائمة أعلى الشاشة */
@@ -142,7 +142,7 @@
   margin: 12px 0 4px;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .vcard__source {

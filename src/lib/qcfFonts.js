@@ -10,20 +10,41 @@ let styleEl = null;
 
 export const pageFontClass = (page) => `qp-${page}`;
 
-// ألوان الخط: لوحتاه الأحاديتان المضمّنتان فيه كما هما (٣ للنهار، ٤ لليل)، ولا يبقى
-// فيهما ملوّنًا إلا زخرفة علامة الآية. والموضع ١٤ يرسم مربعات صغيرة حول بعض العلامات
-// في أواخر الكلمات فيُخفى. ولا يُفرض لون واحد على كل المواضع: فالموضع ١٢ تعبئة دائرة
-// الآية، فيطمس رقمها.
-function addRules(page) {
-  styleEl ??= document.head.appendChild(document.createElement('style'));
+// ألوان الخط (٢٠٢٦-١١-١١): ألوانه مدمجة فيه (طبقات COLR بلوحات ثابتة: أسود للنهار وأبيض لليل)،
+// فلا يؤثر فيه لون النص من الواجهة. فتُستبدل خانات لوحته كلها بـoverride-colors من اختيار المستخدم
+// (تُحسب في سكربت index.html من src/data/appearance.json):
+//   ٠–٩ و١٥  طبقات الكلمات                      ← لون نص المصحف
+//   ١٣       رقم الآية وإطار العلامة الرفيع       ← لون نص المصحف (هما طبقة واحدة في الخط)
+//   ١١       تاجا العلامة أعلاها وأسفلها          ← لون التطبيق (اللون الأساسي للزخرفة)
+//   ١٢       تعبئة العلامة خلف الرقم              ← درجة من لون التطبيق ممزوجة بالخلفية
+//   ١٠       نقطة صغيرة أعلى العلامة             ← درجة أغمق من لون التطبيق
+//   ١٤       مربعات صغيرة حول بعض العلامات        ← تُخفى
+// ولا تقبل override-colors متغيرات CSS، فتُكتب القواعد بالألوان نفسها وتُعاد كتابتها عند تغيير المظهر.
+const TEXT_SLOTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 13, 15];
+
+function rulesFor(page, c) {
   const family = `QCF4P${page}`;
-  styleEl.append(`
-@font-palette-values --qcf${page}l { font-family: '${family}'; base-palette: 3; override-colors: 14 transparent; }
-@font-palette-values --qcf${page}d { font-family: '${family}'; base-palette: 4; override-colors: 14 transparent; }
-.qp-${page} { font-family: '${family}'; font-palette: --qcf${page}l; }
-:root[data-theme='dark'] .qp-${page} { font-palette: --qcf${page}d; }
-`);
+  const slots = [
+    ...TEXT_SLOTS.map((i) => `${i} ${c.ink}`),
+    `10 ${c.dot}`,
+    `11 ${c.ornament}`,
+    `12 ${c.fill}`,
+    '14 transparent',
+  ].join(', ');
+  return `@font-palette-values --qcf${page} { font-family: '${family}'; override-colors: ${slots}; }
+.qp-${page} { font-family: '${family}'; font-palette: --qcf${page}; }
+`;
 }
+
+function writeRules() {
+  const c = window.hqAppearance?.current?.colors;
+  if (!c) return;
+  styleEl ??= document.head.appendChild(document.createElement('style'));
+  styleEl.textContent = [...ready].map((p) => rulesFor(p, c)).join('');
+}
+
+// تغيير الخلفية أو اللون من الإعدادات: تُعاد كتابة ألوان كل الصفحات المحمّلة
+window.addEventListener('hq:appearance', writeRules);
 
 export function loadPageFont(page) {
   let pending = loading.get(page);
@@ -33,8 +54,8 @@ export function loadPageFont(page) {
       .load()
       .then(() => {
         document.fonts.add(face);
-        addRules(page);
         ready.add(page);
+        writeRules();
       })
       .catch((err) => {
         loading.delete(page); // تُتاح إعادة المحاولة عند عودة الاتصال

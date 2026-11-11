@@ -88,7 +88,7 @@
   transform: translateY(-0.14em);
 }
 
-/* المصحف المفتوح: الصفحة الحالية مشرّبة بلون التمييز خفيفًا وأسطرها وإطارها بلونه،
+/* المصحف المفتوح: الصفحة الحالية مشرّبة بلون التطبيق خفيفًا وأسطرها وإطارها بلونه،
    والأخرى بلون الخلفية وإطارها وأسطرها خافتة */
 .page-side {
   width: 30px;
@@ -112,12 +112,12 @@
 }
 
 .page-side__page--on .page-side__sheet {
-  fill: color-mix(in srgb, #fe7d1b 16%, var(--bg));
-  stroke: #fe7d1b;
+  fill: color-mix(in srgb, var(--accent) 16%, var(--bg));
+  stroke: var(--accent);
 }
 
 .page-side__page--on .page-side__lines {
-  stroke: #fe7d1b;
+  stroke: var(--accent);
   opacity: 0.9;
 }
 
