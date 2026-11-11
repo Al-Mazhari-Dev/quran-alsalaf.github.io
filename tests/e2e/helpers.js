@@ -152,6 +152,8 @@ export async function drag(page, dx) {
 // اختيار آية من منتقي الآيات (بعد فتحه)
 export async function pickVerse(page, v) {
   const s = QURAN.verses[v].s;
+  // آيات السورة تُبنى حين تقترب من الشاشة (RangePicker): يُمرَّر إليها أولًا
+  await page.locator(`.rpick__sura[data-sura="${s}"] h3`).scrollIntoViewIfNeeded();
   const btn = page.locator(`.rpick__sura[data-sura="${s}"] .rpick__verse`).filter({ has: page.locator('.rpick__num', { hasText: new RegExp(`^${toArabic(QURAN.verses[v].a)}$`) }) });
   await btn.first().click();
   await expect(page.locator('.rpick')).toHaveCount(0);
