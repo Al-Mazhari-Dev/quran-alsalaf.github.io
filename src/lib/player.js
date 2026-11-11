@@ -29,8 +29,9 @@ function readSettings() {
 
 // ---------- الحالة المعلنة لواجهة التطبيق ----------
 // status: 'idle' | 'loading' | 'playing' | 'paused' — v: الآية الجاري تلاوتها
+// n: يُزاد عند بدء كل مقطع (آية أو بسملة أو إعادتها)، فيُعرف به بدء الآية التالية ولو كانت هي نفسها
 // download: null أو { active, done, fileIndex, fileCount, pct } — تقدّم التنزيل المنفصل
-let state = { status: 'idle', v: null, settings: readSettings(), error: null, download: null };
+let state = { status: 'idle', v: null, n: 0, settings: readSettings(), error: null, download: null };
 const listeners = new Set();
 function set(patch) {
   state = { ...state, ...patch };
@@ -179,6 +180,23 @@ export function play(q, verses) {
   return 'playing';
 }
 
+// تعديل المقدار أثناء التشغيل (عند إغلاق نافذة الاستماع بعد تعديله): إن بقيت الآية الجارية داخل
+// المقدار الجديد أكمل منها بلا انقطاع وانتهى عند نهايته الجديدة، بعدّاد التكرار نفسه؛ وإلا بدأ من
+// أول آية فيه بعدّاد تكرار جديد. النتيجة كـplay()، أو 'continued' إن أكمل من حيث هو
+export function retarget(q, verses) {
+  if (state.status === 'idle') return 'idle';
+  const at = verses.indexOf(queue[pos]);
+  if (at < 0) return play(q, verses);
+  quran = q;
+  if (!covers(reciterById(state.settings.reciter), suraList(verses))) {
+    stop();
+    return 'unsupported';
+  }
+  queue = verses;
+  pos = at;
+  return 'continued';
+}
+
 const suraList = (verses) => [...new Set(verses.map((v) => quran.verses[v].s))];
 
 // يقرأ الآية الجارية (مسبوقة بالبسملة إن كانت أول سورتها وهذه أول قراءة لها)
@@ -193,7 +211,7 @@ function playSegment(next) {
   const el = ensureAudio();
   const r = reciterById(state.settings.reciter);
   seg = next;
-  set({ status: el.paused ? 'loading' : 'playing', v: next.v });
+  set({ status: el.paused ? 'loading' : 'playing', v: next.v, n: state.n + 1 });
   updateMetadata();
   // ملف منزَّل مسبقًا فيُشغَّل مباشرة، وإلا فبثّ مباشر من الشبكة
   el.src = resolveUrl(ayahUrl(r, next.s, next.a));

@@ -13,7 +13,7 @@ import { useLayer } from '../lib/layers.js';
   (ومعه «بلا نهاية»)، ثم زرّ التشغيل الفوري، وتحته تنزيل منفصل اختياري للاستماع بلا إنترنت.
   label: وصف المقدار المسموع (مقدار الاستماع المحدد، وإلا الصفحة أو الصفحتان الظاهرتان)، suras: سوره.
   وفي أعلاها شريط «تحديد مقدار الآيات» خاص بالاستماع (٢٠٢٦-١١-١٠): range وonPickStart/onPickEnd/onClearRange،
-  مستقل عن مقدار صفحات المحتوى، وبه وحده يُخفت ما خارجه في المصحف.
+  مستقل عن مقدار صفحات المحتوى، ولا يُخفت شيئًا في المصحف. وتعديله أثناء التشغيل يُطبَّق عند الإغلاق («تم»).
 */
 export default function ListenSheet({ quran, verses, label, suras, range, onPickStart, onPickEnd, onClearRange, onPlay, onClose, onToast }) {
   const player = usePlayer();
