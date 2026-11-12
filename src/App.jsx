@@ -12,7 +12,7 @@ import RangePicker from './components/RangePicker.jsx';
 import ListenSheet from './components/ListenSheet.jsx';
 import SideMenu from './components/SideMenu.jsx';
 import SearchOverlay from './components/SearchOverlay.jsx';
-import { pause, play, resume, retarget, setSettings as setListenSettings, stop, usePlayer } from './lib/player.js';
+import { FOREVER, pause, play, resume, retarget, setSettings as setListenSettings, stop, usePlayer } from './lib/player.js';
 import { toArabicDigits } from './data/quran.js';
 import { pageVerses, verseLabel } from './lib/study.js';
 import { saveContentRange, saveRange, useUserData } from './lib/userdata.js';
@@ -147,6 +147,16 @@ export default function App() {
     showVerse(v);
     const verses = Array.from({ length: quran.verses.length - v }, (_, i) => v + i);
     if (play(quran, verses, true) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
+  };
+  // «تشغيل الآية وحدها» من مربع الضغط المطوّل (٢٠٢٦-١١-١٢): مقدار الاستماع يصير هذه الآية بدايةً ونهاية،
+  // وتُقرأ times مرة: بتكرار الآية (فالبسملة قبلها مرة واحدة إن كانت أول سورتها)، و«بلا نهاية» بتكرار
+  // المقدار (فتكرار الآية لا يعرف «بلا نهاية»). ثم يُعدَّل التكرار من نافذة الاستماع كالمعتاد
+  const playVerseAlone = (v, times) => {
+    saveRange([v, v]);
+    setListenSettings(times === FOREVER ? { verseRepeat: 1, rangeRepeat: FOREVER } : { verseRepeat: times, rangeRepeat: 1 });
+    playedSel.current = [v, v];
+    showVerse(v);
+    if (play(quran, [v]) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
   };
   // إغلاق نافذة الاستماع أثناء التشغيل بعد تعديل المقدار: الآية الجارية خارج المقدار الجديد ⇐ يبدأ من
   // أوله بعدّاد تكرار جديد؛ وداخله ⇐ يكمل من حيث هو وينتهي عند النهاية الجديدة (retarget)
@@ -595,7 +605,7 @@ export default function App() {
           onClearRange={() => saveContentRange(null)}
         />
       )}
-      {quran && pressed && <VerseMenu quran={quran} pressed={pressed} onClose={() => setPressed(null)} onToast={showToast} onPlay={playFromVerse} />}
+      {quran && pressed && <VerseMenu quran={quran} pressed={pressed} onClose={() => setPressed(null)} onToast={showToast} onPlay={playFromVerse} onPlayAlone={playVerseAlone} />}
       {quran && listenOpen && (
         <ListenSheet
           quran={quran}

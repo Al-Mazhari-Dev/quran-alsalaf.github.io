@@ -6,23 +6,64 @@ test.beforeEach(async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
 });
 
-test('الضغط المطوّل يفتح البطاقة بخياراتها الستة ويظلّل الآية', async ({ page }) => {
+test('الضغط المطوّل يفتح مربعًا كبيرًا بمربعاته الستة ويظلّل الآية', async ({ page }) => {
   await longPress(page, 2);
-  const items = page.locator('.vmenu__picker [role="menuitem"]');
+  const box = page.getByRole('dialog', { name: 'الفاتحة: ٣' });
+  await expect(box.locator('.vbox__head')).toContainText('الفاتحة: ٣');
+  const items = box.locator('.vmenu__picker [role="menuitem"]');
   await expect(items).toHaveText(['تشغيل', 'تفسير', 'معاني', 'عمل', 'ملاحظة', 'علامة']);
-  // الستة كلها داخل البطاقة وداخل الشاشة
-  const card = await page.locator('.vmenu__picker').boundingBox();
-  const vw = page.viewportSize().width;
-  for (const b of await items.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON()))) {
+  // الستة كلها داخل المربع وداخل الشاشة، ثلاثة في كل صف، وكل مربع كبير (٧٢px فأكثر)
+  const card = await box.boundingBox();
+  const vp = page.viewportSize();
+  const rects = await items.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON()));
+  for (const b of rects) {
     expect(b.left).toBeGreaterThanOrEqual(card.x - 0.5);
     expect(b.right).toBeLessThanOrEqual(card.x + card.width + 0.5);
+    expect(b.bottom).toBeLessThanOrEqual(card.y + card.height + 0.5);
+    expect(b.height).toBeGreaterThanOrEqual(72);
+    expect(b.width).toBeGreaterThanOrEqual(72);
   }
+  expect(new Set(rects.map((b) => Math.round(b.top))).size).toBe(2);
   expect(card.x).toBeGreaterThanOrEqual(0);
-  expect(card.x + card.width).toBeLessThanOrEqual(vw);
+  expect(card.x + card.width).toBeLessThanOrEqual(vp.width);
+  expect(card.y).toBeGreaterThanOrEqual(0);
+  expect(card.y + card.height).toBeLessThanOrEqual(vp.height);
+  // وسط الشاشة أفقيًا
+  expect(Math.abs(card.x + card.width / 2 - vp.width / 2)).toBeLessThan(2);
   await expect(word(page, 2)).toHaveClass(/w--selected/);
-  // النقر خارجها يغلقها
-  await page.locator('.vmenu__backdrop').click({ position: { x: 10, y: 10 } });
+  // النقر خارجه يغلقه
+  await page.locator('.vmenu__backdrop').click({ position: { x: 5, y: 5 } });
   await expect(page.locator('.vmenu')).toHaveCount(0);
+  // وزرّ ✕ يغلقه
+  await longPress(page, 2);
+  await page.locator('.vbox').getByRole('button', { name: 'إغلاق' }).click();
+  await expect(page.locator('.vmenu')).toHaveCount(0);
+});
+
+test('تشغيل: الخياران في المربع نفسه، والرجوع وEsc يعيدان المربعات', async ({ page }) => {
+  await longPress(page, 3);
+  await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  const box = page.locator('.vbox');
+  await expect(box.locator('.vbox__head h2')).toHaveText('تشغيل الآية');
+  await expect(box.getByRole('button', { name: /تشغيل الآية وحدها/ })).toBeVisible();
+  await expect(box.getByRole('button', { name: /بدء التشغيل من هذه الآية/ })).toBeVisible();
+  // «وحدها» يُظهر عدد المرات تحته ويطويه
+  const only = box.getByRole('button', { name: /تشغيل الآية وحدها/ });
+  await only.click();
+  await expect(only).toHaveAttribute('aria-expanded', 'true');
+  await expect(box.getByRole('group', { name: 'عدد المرات' })).toBeVisible();
+  await only.click();
+  await expect(box.getByRole('group', { name: 'عدد المرات' })).toHaveCount(0);
+  // الرجوع
+  await box.getByRole('button', { name: 'رجوع' }).click();
+  await expect(page.getByRole('menuitem')).toHaveCount(6);
+  // Esc في خيارات التشغيل يرجع إلى المربعات، ثم يغلق
+  await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menuitem')).toHaveCount(6);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.vmenu')).toHaveCount(0);
+  await expect(page.locator('.w--playing')).toHaveCount(0);
 });
 
 test('الزر الأيمن على آية يفتح بطاقتها، وEsc يغلقها', async ({ page }) => {

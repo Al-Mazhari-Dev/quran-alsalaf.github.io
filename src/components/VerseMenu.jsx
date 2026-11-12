@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toArabicDigits } from '../data/quran.js';
+import { FOREVER } from '../lib/player.js';
 import { copyVerse, loadTafsir, memoIndex, muyassarPlain, verseLabel } from '../lib/study.js';
 import { copyText, readNotes, setNote, toggleBookmark, BOOKMARK_COLOR_NAMES, MAX_BOOKMARKS, readBookmarks } from '../lib/userdata.js';
 import { CopyIcon, NO_ACTIONS, NO_MEANINGS, QuotedText, UNAVAILABLE, VerseCard } from './StudySheet.jsx';
@@ -7,9 +8,13 @@ import './VerseMenu.css';
 import { useLayer } from '../lib/layers.js';
 
 /*
-  الضغط المطوّل على آية (الفصل ٤): بطاقة عائمة صغيرة فوق الآية، أيقوناتها بترتيب ثابت
-  تعلو كلًّا تسميتُها: تشغيل · تفسير · معاني · عمل · ملاحظة · علامة («فوائد» تُضاف لاحقًا إن طُلبت).
-  • تشغيل ⇐ تُغلق البطاقة وتبدأ القراءة من هذه الآية بلا نهاية ولا تكرار (playFromVerse في App.jsx).
+  الضغط المطوّل على آية (الفصل ٤): مربع عائم كبير وسط الشاشة (٢٠٢٦-١١-١٢، بدل البطاقة الصغيرة فوق
+  الآية)، في أعلاه اسم الآية ثم مربعات كبيرة بترتيب ثابت: تشغيل · تفسير · معاني · عمل · ملاحظة · علامة.
+  والمربعات من ACTIONS وحدها، فيُضاف مربع جديد بسطر فيها (وبحالته في choose).
+  • تشغيل ⇐ تختفي المربعات ويظهر في المربع نفسه (بزرّ رجوع) خياران:
+      – «تشغيل الآية وحدها» ⇐ يظهر تحته عدد المرات (مرة · ٥ · ١٠ · ٢٠ · ٥٠ · بلا نهاية)، والضغط على
+        أحدها يشغّل فورًا ويغلق المربع (playVerseAlone في App.jsx).
+      – «بدء التشغيل من هذه الآية» ⇐ يبدأ فورًا متتابعًا بلا نهاية ولا تكرار (playFromVerse في App.jsx).
   • تفسير/معاني/عمل ⇐ بطاقة عائمة أعلى الشاشة بمحتوى هذه الآية وحدها، فيها زرّا نسخ وإغلاق.
     والتفسير يعرض التفسيرين معًا: المختصر ثم الميسّر، ولكلٍّ زرّ نسخ بجانب عنوانه.
   • ملاحظة ⇐ كتابة ملاحظة الآية أو تعديلها (واحدة لكل آية).
@@ -24,19 +29,18 @@ const ACTIONS = [
   { id: 'bookmark', name: 'علامة', icon: 'M7 4.5h10v15l-5-3.6-5 3.6v-15Z' },
 ];
 
-export default function VerseMenu({ quran, pressed, onClose, onToast, onPlay }) {
+// عدد مرات قراءة «الآية وحدها» (بطلب صاحب المشروع)
+export const ALONE_REPEATS = [1, 5, 10, 20, 50, FOREVER];
+const repeatName = (n) => (n === 1 ? 'مرة' : n === FOREVER ? 'بلا نهاية ∞' : toArabicDigits(n));
+
+export default function VerseMenu({ quran, pressed, onClose, onToast, onPlay, onPlayAlone }) {
   const [view, setView] = useState('menu');
-  const { v, rect } = pressed;
-  // Esc يغلق البطاقة؛ وفي الملاحظة يحفظها أولًا كزرّ ✕ فيها
+  const { v } = pressed;
+  // Esc يغلق المربع؛ وفي خيارات التشغيل يرجع إلى المربعات؛ وفي الملاحظة يحفظها أولًا كزرّ ✕ فيها
   const saveNote = useRef(null);
-  useLayer(() => (view === 'note' && saveNote.current ? saveNote.current() : onClose()));
+  useLayer(() => (view === 'note' && saveNote.current ? saveNote.current() : view === 'play' ? setView('menu') : onClose()));
 
   const choose = (id) => {
-    if (id === 'play') {
-      onClose();
-      onPlay(v);
-      return;
-    }
     if (id === 'bookmark') {
       const result = toggleBookmark(v);
       if (result === 'full') onToast(`بلغت العلامات حدّها (${toArabicDigits(MAX_BOOKMARKS)})؛ احذف إحداها من القائمة الجانبية لتضيف غيرها.`);
@@ -54,7 +58,24 @@ export default function VerseMenu({ quran, pressed, onClose, onToast, onPlay }) 
   return (
     <div className="vmenu">
       <div className="vmenu__backdrop" onClick={onClose} />
-      {view === 'menu' && <Picker rect={rect} onChoose={choose} onClose={onClose} hasBookmark={readBookmarks().some((b) => b.v === v)} />}
+      {(view === 'menu' || view === 'play') && (
+        <VerseBox quran={quran} v={v} play={view === 'play'} onBack={() => setView('menu')} onClose={onClose}>
+          {view === 'menu' ? (
+            <Tiles onChoose={choose} hasBookmark={readBookmarks().some((b) => b.v === v)} />
+          ) : (
+            <PlayChoices
+              onAlone={(n) => {
+                onClose();
+                onPlayAlone(v, n);
+              }}
+              onFrom={() => {
+                onClose();
+                onPlay(v);
+              }}
+            />
+          )}
+        </VerseBox>
+      )}
       {(view === 'tafsir' || view === 'meanings' || view === 'actions') && (
         <DetailCard quran={quran} v={v} kind={view} onClose={onClose} onToast={onToast} />
       )}
@@ -63,30 +84,78 @@ export default function VerseMenu({ quran, pressed, onClose, onToast, onPlay }) 
   );
 }
 
-// البطاقة الصغيرة فوق الآية (أو تحتها إن ضاق ما فوقها)
-function Picker({ rect, onChoose, onClose, hasBookmark }) {
-  const ref = useRef(null);
-  const [pos, setPos] = useState(null);
-  useLayoutEffect(() => {
-    const h = ref.current.offsetHeight;
-    const above = rect.top - h - 10;
-    setPos(above > 60 ? { top: above } : { top: rect.bottom + 10 });
-  }, [rect]);
+const Icon = ({ d }) => (
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d={d} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+// المربع العائم الكبير وسط الشاشة: اسم الآية وزرّ إغلاق، وفي خيارات التشغيل زرّ رجوع إلى المربعات
+function VerseBox({ quran, v, play, onBack, onClose, children }) {
+  const verse = quran.verses[v];
+  const name = `${quran.suras[verse.s - 1].name}: ${toArabicDigits(verse.a)}`;
   return (
-    <div ref={ref} className="vmenu__picker" style={pos ?? { visibility: 'hidden' }} role="menu">
+    <section className="vbox" role="dialog" aria-label={play ? `تشغيل ${name}` : name}>
+      <header className="vbox__head">
+        {play && (
+          <button type="button" className="vcard__btn" onClick={onBack} aria-label="رجوع">
+            <Icon d="M9 6l6 6-6 6" />
+          </button>
+        )}
+        <div className="vbox__title">
+          <h2>{play ? 'تشغيل الآية' : name}</h2>
+          {play && <span>{name}</span>}
+        </div>
+        <button type="button" className="vcard__btn" onClick={onClose} aria-label="إغلاق">
+          <Icon d="M6 6l12 12M18 6 6 18" />
+        </button>
+      </header>
+      {children}
+    </section>
+  );
+}
+
+// المربعات الكبيرة: لكلٍّ أيقونة وتسمية تحتها
+function Tiles({ onChoose, hasBookmark }) {
+  return (
+    <div className="vmenu__picker" role="menu">
       {ACTIONS.map((a) => (
         <button key={a.id} type="button" role="menuitem" onClick={() => onChoose(a.id)} className="vmenu__action">
+          <Icon d={a.icon} />
           <span className="vmenu__label">{a.id === 'bookmark' && hasBookmark ? 'إزالة' : a.name}</span>
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d={a.icon} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
         </button>
       ))}
-      {/* إغلاق ظاهر على أجهزة الفأرة (VerseMenu.css)؛ وباللمس يُغلق بالنقر خارجها كما كان */}
-      <button type="button" className="vmenu__x" onClick={onClose} aria-label="إغلاق">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
+    </div>
+  );
+}
+
+// خيارا التشغيل: الآية وحدها (ويظهر تحته عدد المرات، والضغط على أحدها يشغّل)، أو من هذه الآية متتابعًا
+function PlayChoices({ onAlone, onFrom }) {
+  const [alone, setAlone] = useState(false);
+  return (
+    <div className="vplay">
+      <button type="button" className="vplay__opt" aria-expanded={alone} onClick={() => setAlone((x) => !x)}>
+        <Icon d="M8 5.5v13l10.5-6.5L8 5.5Z" />
+        <span>
+          تشغيل الآية وحدها
+          <small>اختر عدد المرات</small>
+        </span>
+      </button>
+      {alone && (
+        <div className="vplay__repeats" role="group" aria-label="عدد المرات">
+          {ALONE_REPEATS.map((n) => (
+            <button key={n} type="button" className="vplay__repeat" onClick={() => onAlone(n)}>
+              {repeatName(n)}
+            </button>
+          ))}
+        </div>
+      )}
+      <button type="button" className="vplay__opt" onClick={onFrom}>
+        <Icon d="M5 5.5v13M9.5 5.5v13l9.5-6.5-9.5-6.5Z" />
+        <span>
+          بدء التشغيل من هذه الآية
+          <small>متتابعًا إلى آخر المصحف</small>
+        </span>
       </button>
     </div>
   );

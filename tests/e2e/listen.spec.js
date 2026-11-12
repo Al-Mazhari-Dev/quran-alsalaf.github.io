@@ -148,7 +148,7 @@ test('مقدار صفحات المحتوى يبقى مُخفتًا أثناء ا
   await expect(word(page, 3)).not.toHaveClass(/w--out/);
 });
 
-// زرّ «تشغيل» في بطاقة الضغط المطوّل: قراءة عادية من الآية بلا نهاية ولا تكرار، والآية تصير بداية
+// «بدء التشغيل من هذه الآية» (بعد «تشغيل» في مربع الضغط المطوّل): قراءة عادية من الآية بلا نهاية ولا تكرار، والآية تصير بداية
 // مقدار الاستماع (يحل محل المقدار السابق)، ثم تُضاف النهاية من نافذة الاستماع فتُطبَّق عند «تم»
 test('تشغيل من بطاقة الآية: من هذه الآية بلا نهاية ولا تكرار، ثم إضافة نهاية', async ({ page }) => {
   await openApp(page, {
@@ -158,6 +158,7 @@ test('تشغيل من بطاقة الآية: من هذه الآية بلا نه�
   });
   await longPress(page, 2);
   await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  await page.getByRole('button', { name: /بدء التشغيل من هذه الآية/ }).click();
   await expect(page.locator('.vmenu')).toHaveCount(0);
   await expect(word(page, 2)).toHaveClass(/w--playing/);
   expect(await lastSrc(page)).toMatch(/Saood_ash-Shuraym_128kbps\/001003\.mp3$/);
@@ -190,9 +191,88 @@ test('تشغيل من بطاقة آية أثناء استماع جارٍ يبد�
   await expect(word(page, 0)).toHaveClass(/w--playing/);
   await longPress(page, 5);
   await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  await page.getByRole('button', { name: /بدء التشغيل من هذه الآية/ }).click();
   await expect(word(page, 5)).toHaveClass(/w--playing/);
   await expect(word(page, 0)).not.toHaveClass(/w--playing/);
   expect(await stored(page, 'hq.range')).toEqual([5]);
+});
+
+// «تشغيل الآية وحدها» (٢٠٢٦-١١-١٢): «تشغيل» في مربع الضغط المطوّل يُظهر خيارين بدل المربعات، والأول يُظهر
+// تحته عدد المرات، والضغط على أحدها يشغّل الآية وحدها بذلك العدد، ومقدار الاستماع يصير هذه الآية
+test('تشغيل الآية وحدها خمس مرات: المقدار هذه الآية، ثم يتوقف', async ({ page }) => {
+  await openApp(page, {
+    'hq.page': '1',
+    'hq.range': [0, 3],
+    'hq.listen': { reciter: 'shuraym', verseRepeat: 3, rangeRepeat: 2 },
+  });
+  await longPress(page, 2);
+  await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  // المربعات تختفي ويظهر الخياران في المربع نفسه، وعدد المرات لا يظهر قبل اختيار «وحدها»
+  await expect(page.getByRole('menuitem')).toHaveCount(0);
+  const box = page.getByRole('dialog', { name: 'تشغيل الفاتحة: ٣' });
+  await expect(box).toBeVisible();
+  await expect(box.getByRole('group', { name: 'عدد المرات' })).toHaveCount(0);
+  await box.getByRole('button', { name: /تشغيل الآية وحدها/ }).click();
+  const times = box.getByRole('group', { name: 'عدد المرات' }).getByRole('button');
+  await expect(times).toHaveText(['مرة', '٥', '١٠', '٢٠', '٥٠', 'بلا نهاية ∞']);
+  await times.filter({ hasText: '٥' }).first().click();
+  await expect(page.locator('.vmenu')).toHaveCount(0);
+  await expect(word(page, 2)).toHaveClass(/w--playing/);
+  expect(await stored(page, 'hq.range')).toEqual([2, 2]);
+  expect(await stored(page, 'hq.listen')).toMatchObject({ verseRepeat: 5, rangeRepeat: 1 });
+  // تُقرأ خمس مرات ثم يتوقف
+  for (let i = 0; i < 4; i++) {
+    await end(page);
+    await expect(word(page, 2)).toHaveClass(/w--playing/);
+  }
+  expect(await page.evaluate(() => window.__audio.srcs.filter((x) => x.endsWith('001003.mp3')).length)).toBe(5);
+  await end(page);
+  await expect(page.locator('.w--playing')).toHaveCount(0);
+  // نافذة الاستماع: المقدار آية واحدة، وتكرار الآية خمس
+  await clickDock(page, 'الاستماع للآيات');
+  await expect(listen(page).locator('.listen__head span')).toContainText('الفاتحة ٣');
+  await expect(listen(page).locator('.listen__head span')).not.toContainText('–');
+  await expect(listen(page).locator('select').nth(0)).toHaveValue('5');
+});
+
+test('تشغيل الآية وحدها: «مرة» تقرؤها مرة، و«بلا نهاية» تكررها بلا توقف', async ({ page }) => {
+  await openApp(page, { 'hq.page': '1' });
+  await longPress(page, 4);
+  await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  await page.getByRole('button', { name: /تشغيل الآية وحدها/ }).click();
+  await page.getByRole('button', { name: 'مرة', exact: true }).click();
+  await expect(word(page, 4)).toHaveClass(/w--playing/);
+  expect(await stored(page, 'hq.listen')).toMatchObject({ verseRepeat: 1, rangeRepeat: 1 });
+  await end(page);
+  await expect(page.locator('.w--playing')).toHaveCount(0);
+
+  await longPress(page, 5);
+  await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  await page.getByRole('button', { name: /تشغيل الآية وحدها/ }).click();
+  await page.getByRole('button', { name: 'بلا نهاية ∞' }).click();
+  expect(await stored(page, 'hq.range')).toEqual([5, 5]);
+  expect(await stored(page, 'hq.listen')).toMatchObject({ verseRepeat: 1, rangeRepeat: 0 });
+  for (let i = 0; i < 6; i++) {
+    await end(page);
+    await expect(word(page, 5)).toHaveClass(/w--playing/);
+  }
+  await expect(word(page, 6)).not.toHaveClass(/w--playing/);
+});
+
+test('تشغيل أول آية في سورة وحدها مكررة: البسملة قبلها مرة واحدة', async ({ page }) => {
+  await openApp(page, { 'hq.page': '2' });
+  await longPress(page, 7);
+  await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  await page.getByRole('button', { name: /تشغيل الآية وحدها/ }).click();
+  await page.getByRole('button', { name: '٥', exact: true }).click();
+  expect(await lastSrc(page)).toMatch(/001001\.mp3$/);
+  for (let i = 0; i < 5; i++) {
+    await end(page);
+    expect(await lastSrc(page)).toMatch(/002001\.mp3$/);
+  }
+  await end(page);
+  await expect(page.locator('.w--playing')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__audio.srcs.filter((x) => x.endsWith('001001.mp3')).length)).toBe(1);
 });
 
 // منتقي الآية: السور مطوية بأسهمها إلا سورة الموضع الحالي، وسورة واحدة مفتوحة في كل مرة
