@@ -181,6 +181,13 @@
   background: var(--accent-soft);
 }
 
+.searchov__suraNote {
+  margin: -2px 0 8px;
+  padding-inline: 48px 12px;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
 .searchov__num {
   flex: none;
   display: grid;

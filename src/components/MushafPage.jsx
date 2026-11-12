@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { pageFontClass } from '../lib/qcfFonts.js';
 import { weekMap } from '../lib/weeks.js';
 import { BOOKMARK_COLORS } from '../lib/userdata.js';
@@ -20,7 +20,8 @@ const OPENING_HEADER_ROW = OPENING_TEXT_ROW - 1;
 */
 // marks: ما يُرسم فوق الآيات من بيانات المستخدم —
 //   notes { آية: نص }، bookmarks [{ v, color }]، range [أول، آخر] (يُخفت ما خارجه)،
-//   selected الآية المضغوط عليها ضغطًا مطوّلًا، playing الآية الجاري تلاوتها
+//   selected الآية المضغوط عليها ضغطًا مطوّلًا، playing الآية الجاري تلاوتها،
+//   flash الآية المنتقَل إليها من البحث (تمييز مؤقت يتلاشى)
 function MushafPage({ quran, page, fontSize, width, height, shortLines, marks }) {
   const lines = quran.pages[page - 1];
   const glyphs = quran.qcf.pages[page - 1];
@@ -28,8 +29,21 @@ function MushafPage({ quran, page, fontSize, width, height, shortLines, marks })
   let row = OPENING_TEXT_ROW;
   const bookmarkOf = new Map((marks?.bookmarks ?? []).map((b) => [b.v, b.color]));
 
+  // الجوال الأفقي: الصفحة تُمرَّر رأسيًّا داخل ورقتها، فتُحضر الآية المميَّزة إلى منظر العين
+  const ref = useRef(null);
+  const flash = marks?.flash;
+  useEffect(() => {
+    if (flash == null) return;
+    const word = ref.current?.querySelector('.w--flash');
+    const sheet = word?.closest('.sheet--scroll');
+    if (!sheet) return;
+    const top = word.getBoundingClientRect().top - sheet.getBoundingClientRect().top;
+    if (top < 0 || top > sheet.clientHeight * 0.7) sheet.scrollTop += top - sheet.clientHeight / 3;
+  }, [flash]);
+
   return (
     <div
+      ref={ref}
       className={`mushaf-page no-select${opening ? ' mushaf-page--opening' : ''}`}
       style={{ '--fs': `${fontSize}px`, width: `${width}px`, ...(height ? { height: `${height}px` } : {}) }}
       lang="ar"
@@ -113,6 +127,7 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
         if (week) cls += ` w--week w--week-${week}`;
         if (outside(v)) cls += ' w--out';
         if (marks?.selected === v) cls += ' w--selected';
+        else if (marks?.flash === v) cls += ' w--flash';
         else if (marks?.playing === v) cls += ' w--playing';
         // الآية ذات العلامة أو الملاحظة (بطلب صاحب المشروع): علامة الآية ورقمها كما هما؛
         // الملاحظة دفتر ملاحظات صغير أعلى الدائرة يمينًا، والعلامة رمز شريطتها بلونها أعلاها يسارًا

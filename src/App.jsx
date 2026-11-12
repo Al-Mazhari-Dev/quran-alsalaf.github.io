@@ -27,6 +27,8 @@ const SPLASH_MIN_MS = 0; // لا شاشة ثانية: تكفي شاشة النظ
 const SPLASH_FADE_MS = 420;
 // الأزرار العائمة الظاهرة بتحريك الفأرة تختفي بعد توقفها هذه المدة
 const MOUSE_IDLE_MS = 2500;
+// مهلة احتياطية لزوال التمييز المؤقت إن لم تُرسم الآية (كتعذّر خط صفحتها)
+const FLASH_FALLBACK_MS = 12000;
 
 export default function App() {
   const [quran, setQuran] = useState(null);
@@ -39,6 +41,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sideMenuOpen, setSideMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  // الآية المميَّزة تمييزًا مؤقتًا بعد الانتقال إليها من البحث: { v: موضعها، n }
+  const [flash, setFlash] = useState(null);
   // صفحة لوحة الإعدادات الظاهرة: الإعدادات نفسها، أو صفحة فرعية فيها («عن التطبيق»)
   const [settingsPage, setSettingsPage] = useState('main');
   // صفحات المحتوى (تفسير · معاني الكلمات · العمل بالآيات): تُفتح بزرّها في الشريط السفلي —
@@ -159,8 +163,8 @@ export default function App() {
   // ولو أثناء الاستماع. ومقدار الاستماع لا يُخفت شيئًا؛ والآية الجارية مظلَّلة، وإن كانت خارج مقدار
   // صفحات المحتوى بقي نصّها شفافًا وتظليلها خلفه (MushafPage.css)
   const marks = useMemo(
-    () => ({ notes: user.notes, bookmarks: user.bookmarks, range: contentSel, selected: pressed?.v ?? null, playing: player.v }),
-    [user.notes, user.bookmarks, contentSel?.[0], contentSel?.[1], pressed?.v, player.v]
+    () => ({ notes: user.notes, bookmarks: user.bookmarks, range: contentSel, selected: pressed?.v ?? null, playing: player.v, flash: flash?.v ?? null }),
+    [user.notes, user.bookmarks, contentSel?.[0], contentSel?.[1], pressed?.v, player.v, flash?.v]
   );
 
   // دخول وضع القراءة من الإعدادات: يُوقَف الصوت بهدوء (الاستماع وتحديد المقدار لا يعملان فيه)،
@@ -391,8 +395,25 @@ export default function App() {
     };
   }, []);
 
-  // الانتقال إلى صفحة من القائمة الجانبية أو البحث
-  const gotoPageNumber = useCallback((p) => setGotoPage({ page: p, n: Date.now() }), []);
+  // الانتقال إلى صفحة من القائمة الجانبية أو البحث؛ ومن نتيجة آية في البحث تُميَّز الآية تمييزًا مؤقتًا
+  const gotoPageNumber = useCallback((p, verse) => {
+    setGotoPage({ page: p, n: Date.now() });
+    setFlash(verse == null ? null : { v: verse, n: Date.now() });
+  }, []);
+
+  // التمييز المؤقت (٢٠٢٦-١١-١٢): يبدأ حين تُرسم الآية في صفحتها (ولو تأخر خط الصفحة)، ويتلاشى
+  // بعد نحو ٣ ثوانٍ (MushafPage.css)، فيزول بنهاية تلاشيه، وإلا بعد مهلة احتياطية إن لم تُرسم
+  useEffect(() => {
+    if (!flash) return;
+    const end = () => setFlash((f) => (f === flash ? null : f));
+    const onEnd = (e) => e.animationName === 'verse-flash' && end();
+    document.addEventListener('animationend', onEnd);
+    const timer = setTimeout(end, FLASH_FALLBACK_MS);
+    return () => {
+      document.removeEventListener('animationend', onEnd);
+      clearTimeout(timer);
+    };
+  }, [flash]);
 
   // ما دامت فوق المصحف صفحة أو قائمة أو بطاقة، فهو خارج التركيز ولوحة المفاتيح (inert)
   const covered =
