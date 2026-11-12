@@ -73,7 +73,8 @@
   align-items: center;
   gap: 8px;
   height: 44px;
-  padding: 0 14px;
+  /* ١٢ لا ١٤: ليتسع «ابحث في المصحف بالكلمات والأرقام» كاملًا في الجوالات الضيقة (عرض ٣٦٠) */
+  padding: 0 12px;
   border-radius: var(--r-md);
   color: var(--ink-faint);
   font-size: var(--text-sm);

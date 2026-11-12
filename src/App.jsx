@@ -12,7 +12,7 @@ import RangePicker from './components/RangePicker.jsx';
 import ListenSheet from './components/ListenSheet.jsx';
 import SideMenu from './components/SideMenu.jsx';
 import SearchOverlay from './components/SearchOverlay.jsx';
-import { pause, play, resume, retarget, stop, usePlayer } from './lib/player.js';
+import { pause, play, resume, retarget, setSettings as setListenSettings, stop, usePlayer } from './lib/player.js';
 import { toArabicDigits } from './data/quran.js';
 import { pageVerses, verseLabel } from './lib/study.js';
 import { saveContentRange, saveRange, useUserData } from './lib/userdata.js';
@@ -134,6 +134,19 @@ export default function App() {
     // play() ترجع 'unsupported' أو 'playing' (src/lib/player.js)، ونافذة الاستماع تبقى مفتوحة كما كانت
     if (play(quran, playVerses(), !selection) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
     // أخطاء التشغيل نفسه تظهر من التأثير أدناه (player.error)
+  };
+  // زرّ «تشغيل» في بطاقة الضغط المطوّل (٢٠٢٦-١١-١٢): قراءة عادية من هذه الآية بالقارئ المحدد، بلا
+  // نهاية ولا تكرار، متتابعةً إلى آخر المصحف. فيصير مقدار الاستماع «البداية = هذه الآية» بلا نهاية،
+  // ويُرجَع تكرار الآية وتكرار المقدار كلاهما إلى «بدون تكرار» (فلا يعود تكرار سابق للمقدار إن أُضيفت
+  // نهاية بعدها)؛ ثم يعدّل المستخدم من نافذة الاستماع ما شاء (النهاية والقارئ والتكرار) فيُطبَّق عند
+  // إغلاقها كالمعتاد. وإن كان استماع جارٍ بدأ من هذه الآية بدله
+  const playFromVerse = (v) => {
+    saveRange([v]);
+    setListenSettings({ verseRepeat: 1, rangeRepeat: 1 });
+    playedSel.current = [v];
+    showVerse(v);
+    const verses = Array.from({ length: quran.verses.length - v }, (_, i) => v + i);
+    if (play(quran, verses, true) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
   };
   // إغلاق نافذة الاستماع أثناء التشغيل بعد تعديل المقدار: الآية الجارية خارج المقدار الجديد ⇐ يبدأ من
   // أوله بعدّاد تكرار جديد؛ وداخله ⇐ يكمل من حيث هو وينتهي عند النهاية الجديدة (retarget)
@@ -449,7 +462,7 @@ export default function App() {
               <circle cx="11" cy="11" r="6.4" stroke="currentColor" strokeWidth="1.7" />
               <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
             </svg>
-            <span>بحث في المصحف</span>
+            <span>ابحث في المصحف بالكلمات والأرقام</span>
           </button>
 
           {/* الإعدادات أعلى اليسار مقابل القائمة: لوحة جانبية من اليسار، وفيها تبديل الوضع الفاتح والداكن */}
@@ -582,7 +595,7 @@ export default function App() {
           onClearRange={() => saveContentRange(null)}
         />
       )}
-      {quran && pressed && <VerseMenu quran={quran} pressed={pressed} onClose={() => setPressed(null)} onToast={showToast} />}
+      {quran && pressed && <VerseMenu quran={quran} pressed={pressed} onClose={() => setPressed(null)} onToast={showToast} onPlay={playFromVerse} />}
       {quran && listenOpen && (
         <ListenSheet
           quran={quran}

@@ -50,7 +50,7 @@ export default function SearchOverlay({ quran, onGoto, onClose }) {
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث بالكلمات أو الأرقام…"
+            placeholder="ابحث في المصحف بالكلمات والأرقام"
             inputMode="search"
             enterKeyHint="search"
           />

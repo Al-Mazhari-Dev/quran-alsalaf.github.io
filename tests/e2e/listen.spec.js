@@ -1,7 +1,7 @@
 // الاستماع بمحاكاة الصوت (بلا صوت حقيقي): تظليل الآية الجارية، والتقليب التلقائي، والتكرار،
 // وتعديل المقدار أثناء التشغيل، وتغيير القارئ
 import { test, expect } from '@playwright/test';
-import { clickDock, isLaptop, openApp, pageVerses, pickVerse, savedPage, shownPages, showChrome, word } from './helpers.js';
+import { clickDock, isLaptop, longPress, openApp, pageVerses, pickVerse, savedPage, shownPages, showChrome, stored, word } from './helpers.js';
 
 const listen = (page) => page.getByRole('dialog', { name: 'الاستماع للآيات' });
 const playing = (page) => page.locator('.sheet--current .w--playing').first().getAttribute('data-v').then(Number);
@@ -146,4 +146,86 @@ test('مقدار صفحات المحتوى يبقى مُخفتًا أثناء ا
   await expect(word(page, 0)).toHaveClass(/w--playing/);
   await expect(word(page, 0)).toHaveClass(/w--out/);
   await expect(word(page, 3)).not.toHaveClass(/w--out/);
+});
+
+// زرّ «تشغيل» في بطاقة الضغط المطوّل: قراءة عادية من الآية بلا نهاية ولا تكرار، والآية تصير بداية
+// مقدار الاستماع (يحل محل المقدار السابق)، ثم تُضاف النهاية من نافذة الاستماع فتُطبَّق عند «تم»
+test('تشغيل من بطاقة الآية: من هذه الآية بلا نهاية ولا تكرار، ثم إضافة نهاية', async ({ page }) => {
+  await openApp(page, {
+    'hq.page': '1',
+    'hq.range': [0, 1],
+    'hq.listen': { reciter: 'shuraym', verseRepeat: 3, rangeRepeat: 2 },
+  });
+  await longPress(page, 2);
+  await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  await expect(page.locator('.vmenu')).toHaveCount(0);
+  await expect(word(page, 2)).toHaveClass(/w--playing/);
+  expect(await lastSrc(page)).toMatch(/Saood_ash-Shuraym_128kbps\/001003\.mp3$/);
+  expect(await stored(page, 'hq.range')).toEqual([2]);
+  expect(await stored(page, 'hq.listen')).toMatchObject({ verseRepeat: 1, rangeRepeat: 1 });
+  // بلا تكرار: الآية التالية مباشرة
+  await end(page);
+  await expect(word(page, 3)).toHaveClass(/w--playing/);
+
+  // نافذة الاستماع: البداية محددة بلا نهاية، والتكرار «بدون تكرار»
+  await showChrome(page);
+  await page.getByRole('button', { name: 'إعدادات الاستماع' }).click();
+  await expect(listen(page).locator('.listen__head span')).toContainText('إلى آخر المصحف');
+  await expect(listen(page).locator('select').nth(0)).toHaveValue('1');
+  await listen(page).getByRole('button', { name: /النهاية/ }).click();
+  await pickVerse(page, 4);
+  await listen(page).getByRole('button', { name: 'تم', exact: true }).click();
+  await expect(word(page, 3)).toHaveClass(/w--playing/);
+  await end(page);
+  await expect(word(page, 4)).toHaveClass(/w--playing/);
+  await end(page);
+  await expect(page.locator('.w--playing')).toHaveCount(0);
+});
+
+test('تشغيل من بطاقة آية أثناء استماع جارٍ يبدأ من الآية الجديدة', async ({ page }) => {
+  await openApp(page, { 'hq.page': '1' });
+  await clickDock(page, 'الاستماع للآيات');
+  await listen(page).getByRole('button', { name: 'تشغيل' }).click();
+  await page.keyboard.press('Escape');
+  await expect(word(page, 0)).toHaveClass(/w--playing/);
+  await longPress(page, 5);
+  await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  await expect(word(page, 5)).toHaveClass(/w--playing/);
+  await expect(word(page, 0)).not.toHaveClass(/w--playing/);
+  expect(await stored(page, 'hq.range')).toEqual([5]);
+});
+
+// منتقي الآية: السور مطوية بأسهمها إلا سورة الموضع الحالي، وسورة واحدة مفتوحة في كل مرة
+test('منتقي الآية: السور مطوية، والسهم يفتح آيات السورة ويطويها', async ({ page }) => {
+  await openApp(page, { 'hq.page': '3' });
+  await clickDock(page, 'الاستماع للآيات');
+  await listen(page).getByRole('button', { name: /البداية/ }).click();
+  const picker = page.getByRole('dialog', { name: 'اختر آية البداية' });
+  const toggle = (s) => picker.locator(`.rpick__sura[data-sura="${s}"] .rpick__toggle`);
+  const verses = (s) => picker.locator(`.rpick__sura[data-sura="${s}"] .rpick__verse`);
+  // سورة الموضع الحالي (البقرة) مفتوحة وحدها
+  await expect(picker.locator('.rpick__toggle')).toHaveCount(114);
+  await expect(toggle(2)).toHaveAttribute('aria-expanded', 'true');
+  await expect(toggle(1)).toHaveAttribute('aria-expanded', 'false');
+  await expect(verses(2)).toHaveCount(286);
+  await expect(picker.locator('.rpick__verse')).toHaveCount(286);
+  await expect(toggle(2)).toBeInViewport();
+  // فتح سورة أخرى يطوي التي قبلها
+  await toggle(18).scrollIntoViewIfNeeded();
+  await toggle(18).click();
+  await expect(toggle(18)).toHaveAttribute('aria-expanded', 'true');
+  await expect(toggle(2)).toHaveAttribute('aria-expanded', 'false');
+  await expect(picker.locator('.rpick__verse')).toHaveCount(110);
+  await expect(toggle(18)).toBeInViewport();
+  // الضغط ثانيةً يطويها
+  await toggle(18).click();
+  await expect(toggle(18)).toHaveAttribute('aria-expanded', 'false');
+  await expect(picker.locator('.rpick__verse')).toHaveCount(0);
+  // اختيار آية من الفاتحة، ثم منتقي النهاية: سورة آية البداية مفتوحة من آية البداية
+  await pickVerse(page, 2);
+  await listen(page).getByRole('button', { name: /النهاية/ }).click();
+  const endPicker = page.getByRole('dialog', { name: 'اختر آية النهاية' });
+  await expect(endPicker.locator('.rpick__sura[data-sura="1"] .rpick__toggle')).toHaveAttribute('aria-expanded', 'true');
+  await expect(endPicker.locator('.rpick__verse').first().locator('.rpick__num')).toHaveText('٣');
+  await expect(endPicker.locator('.rpick__verse')).toHaveCount(5);
 });
