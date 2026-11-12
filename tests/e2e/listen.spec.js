@@ -275,6 +275,72 @@ test('تشغيل أول آية في سورة وحدها مكررة: البسمل
   expect(await page.evaluate(() => window.__audio.srcs.filter((x) => x.endsWith('001001.mp3')).length)).toBe(1);
 });
 
+// بعد التشغيل من مربع الآية (وحدها أو منها متتابعًا): زر الاستماع يصير أزرار التحكم كالتشغيل من نافذته،
+// ومن «إعدادات الاستماع» تُعدَّل النهاية والتكرار والقارئ وتُطبَّق عند «تم»
+test('بعد تشغيل الآية وحدها: أزرار التحكم، ثم تغيير القارئ والتكرار وإضافة نهاية', async ({ page }) => {
+  await openApp(page, { 'hq.page': '1' });
+  await longPress(page, 2);
+  await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  await page.getByRole('button', { name: /تشغيل الآية وحدها/ }).click();
+  await page.getByRole('button', { name: '٥', exact: true }).click();
+  await showChrome(page);
+  const dock = page.locator('.dock');
+  await expect(dock.getByRole('button', { name: 'إيقاف مؤقت' })).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'إعدادات الاستماع' })).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'إيقاف', exact: true })).toBeVisible();
+  await dock.getByRole('button', { name: 'إعدادات الاستماع' }).click();
+  await expect(listen(page).locator('.listen__head span')).toContainText('الفاتحة ٣');
+  await expect(listen(page).locator('select').nth(0)).toHaveValue('5');
+  // القارئ
+  await listen(page).getByRole('button', { name: /القارئ/ }).click();
+  await page.getByRole('dialog', { name: 'اختر القارئ' }).getByRole('radio', { name: 'ماهر المعيقلي' }).click();
+  expect(await lastSrc(page)).toMatch(/MaherAlMuaiqly128kbps\/001003\.mp3$/);
+  // تكرار الآية مرتين، ونهاية بدل الآية الواحدة
+  await listen(page).locator('select').nth(0).selectOption('2');
+  await listen(page).getByRole('button', { name: /النهاية/ }).click();
+  await pickVerse(page, 4);
+  await expect(listen(page).locator('.listen__head span')).toContainText('الفاتحة ٣–٥');
+  await listen(page).getByRole('button', { name: 'تم', exact: true }).click();
+  expect(await stored(page, 'hq.range')).toEqual([2, 4]);
+  // يكمل حتى الآية التالية، ثم كل آية مرتين حتى النهاية الجديدة، ثم يتوقف
+  for (let i = 0; i < 4 && (await playing(page)) === 2; i++) await end(page);
+  await expect(word(page, 3)).toHaveClass(/w--playing/);
+  await end(page);
+  await expect(word(page, 3)).toHaveClass(/w--playing/);
+  await end(page);
+  await expect(word(page, 4)).toHaveClass(/w--playing/);
+  expect(await lastSrc(page)).toMatch(/MaherAlMuaiqly128kbps\/001005\.mp3$/);
+  await end(page);
+  await expect(word(page, 4)).toHaveClass(/w--playing/);
+  await end(page);
+  await expect(page.locator('.w--playing')).toHaveCount(0);
+});
+
+test('بعد بدء التشغيل من هذه الآية: أزرار التحكم، ثم إضافة نهاية وتكرار المقدار', async ({ page }) => {
+  await openApp(page, { 'hq.page': '1' });
+  await longPress(page, 0);
+  await page.getByRole('menuitem', { name: 'تشغيل' }).click();
+  await page.getByRole('button', { name: /بدء التشغيل من هذه الآية/ }).click();
+  await showChrome(page);
+  const dock = page.locator('.dock');
+  await expect(dock.getByRole('button', { name: 'إيقاف مؤقت' })).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'إيقاف', exact: true })).toBeVisible();
+  await dock.getByRole('button', { name: 'إعدادات الاستماع' }).click();
+  await expect(listen(page).locator('.listen__head span')).toContainText('إلى آخر المصحف');
+  await listen(page).getByRole('button', { name: /النهاية/ }).click();
+  await pickVerse(page, 1);
+  await listen(page).locator('select').nth(1).selectOption('2');
+  await listen(page).getByRole('button', { name: 'تم', exact: true }).click();
+  await expect(word(page, 0)).toHaveClass(/w--playing/);
+  // المقدار الأولى–الثانية مرتين ثم يتوقف
+  for (const v of [1, 0, 1]) {
+    await end(page);
+    await expect(word(page, v)).toHaveClass(/w--playing/);
+  }
+  await end(page);
+  await expect(page.locator('.w--playing')).toHaveCount(0);
+});
+
 // منتقي الآية: السور مطوية بأسهمها إلا سورة الموضع الحالي، وسورة واحدة مفتوحة في كل مرة
 test('منتقي الآية: السور مطوية، والسهم يفتح آيات السورة ويطويها', async ({ page }) => {
   await openApp(page, { 'hq.page': '3' });
