@@ -9,6 +9,10 @@
 //   • قبل الآية الأولى من كل سورة (عدا الفاتحة والتوبة) تُقرأ البسملة: وهي آية الفاتحة الأولى
 //     بصوت القارئ نفسه
 //   • التشغيل في الخلفية وأزرار شاشة القفل عبر Media Session
+//   • احترام أصوات التطبيقات الأخرى: إن أوقف الجهاز التلاوة لأن تطبيقًا آخر شغّل صوتًا، صارت
+//     «موقوفة بمقاطعة» (interrupted) فلا تتقدم ولا تزاحمه، وتكمل من الآية نفسها إن أعادها الجهاز
+//     بنفسه، أو عند الضغط على تشغيل، أو عند الرجوع إلى التطبيق (ولا تكمل عند الرجوع إن أوقفها
+//     المستخدم بيده). والمتصفح لا يُعلم الصفحة بانتهاء صوت التطبيق الآخر، فلا إكمال وهي في الخلفية
 import { useSyncExternalStore } from 'react';
 import { ayahUrl, covers, reciterById, reciterTitle } from './reciters.js';
 
@@ -31,7 +35,8 @@ function readSettings() {
 // status: 'idle' | 'loading' | 'playing' | 'paused' — v: الآية الجاري تلاوتها
 // n: يُزاد عند بدء كل مقطع (آية أو بسملة أو إعادتها)، فيُعرف به بدء الآية التالية ولو كانت هي نفسها
 // download: null أو { active, done, fileIndex, fileCount, pct } — تقدّم التنزيل المنفصل
-let state = { status: 'idle', v: null, n: 0, settings: readSettings(), error: null, download: null };
+// interrupted: الإيقاف الجاري من الجهاز (صوت تطبيق آخر أو رفض المتصفح للتشغيل) لا من المستخدم
+let state = { status: 'idle', v: null, n: 0, settings: readSettings(), error: null, download: null, interrupted: false };
 const listeners = new Set();
 function set(patch) {
   state = { ...state, ...patch };
@@ -41,7 +46,8 @@ const subscribe = (l) => {
   listeners.add(l);
   return () => listeners.delete(l);
 };
-export const usePlayer = () => useSyncExternalStore(subscribe, () => state);
+export const playerState = () => state;
+export const usePlayer = () => useSyncExternalStore(subscribe, playerState);
 
 // ---------- المحرّك ----------
 let audio = null;
@@ -74,7 +80,20 @@ function ensureAudio() {
   audio = new Audio();
   audio.preload = 'auto';
   audio.addEventListener('ended', () => segmentDone());
-  audio.addEventListener('playing', () => state.status !== 'idle' && set({ status: 'playing' }));
+  audio.addEventListener('playing', () => {
+    if (state.status === 'idle') return;
+    set({ status: 'playing', interrupted: false });
+    setPlaybackState('playing');
+  });
+  // إيقاف لم يطلبه التطبيق: الجهاز أوقف الصوت لأن تطبيقًا آخر شغّل صوتًا (أو مكالمة ونحوها).
+  // ويُهمل إيقاف نهاية المقطع الطبيعية (يسبق 'ended')، وما طلبه التطبيق نفسه (الحالة فيه
+  // 'paused' أو 'idle' سلفًا)، وما تلاه تشغيل جديد قبل وصوله (paused صار false)
+  audio.addEventListener('pause', () => {
+    if (!audio.paused || audio.ended) return;
+    if (state.status !== 'playing' && state.status !== 'loading') return;
+    set({ status: 'paused', interrupted: true });
+    setPlaybackState('paused');
+  });
   audio.addEventListener('waiting', () => state.status === 'playing' && set({ status: 'loading' }));
   audio.addEventListener('error', () => {
     if (state.status === 'idle' || !audio.getAttribute('src')) return;
@@ -82,6 +101,10 @@ function ensureAudio() {
     set({ error: { text: 'تعذّر تشغيل الصوت. الاستماع يحتاج اتصالًا بالإنترنت (إلا ما نُزِّل مسبقًا).', n: Date.now() } });
   });
   setupMediaSession();
+  // الرجوع إلى التطبيق يكمل التلاوة إن كان إيقافها من الجهاز لا من المستخدم
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state.interrupted && state.status === 'paused') resume();
+  });
   return audio;
 }
 
@@ -178,7 +201,7 @@ export function play(q, verses, cont = false) {
   pos = 0;
   verseRep = 0;
   rangeRep = 0;
-  set({ error: null });
+  set({ error: null, interrupted: false });
   startVerse(true);
   return 'playing';
 }
@@ -225,8 +248,11 @@ function playSegment(next) {
 function onPlayError(e) {
   // إيقاف مقصود أثناء التحميل ليس خطأ
   if (e?.name === 'AbortError') return;
+  // المتصفح رفض التشغيل (كبدء الآية التالية والتطبيق في الخلفية): يُعامل كمقاطعة من الجهاز،
+  // فيكمل عند الرجوع إلى التطبيق
   if (e?.name === 'NotAllowedError') {
-    set({ status: 'paused' });
+    set({ status: 'paused', interrupted: true });
+    setPlaybackState('paused');
     return;
   }
   stop();
@@ -254,7 +280,8 @@ function segmentDone() {
 export function pause() {
   if (!audio || state.status === 'idle') return;
   audio.pause();
-  set({ status: 'paused' });
+  set({ status: 'paused', interrupted: false });
+  setPlaybackState('paused');
 }
 
 export function resume() {
@@ -270,8 +297,8 @@ export function stop() {
     audio.removeAttribute('src');
     audio.load();
   }
-  set({ status: 'idle', v: null });
-  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'none';
+  set({ status: 'idle', v: null, interrupted: false });
+  setPlaybackState('none');
 }
 
 // الانتقال إلى الآية السابقة أو التالية في النطاق (من أزرار شاشة القفل)
@@ -307,6 +334,10 @@ export function setSettings(patch) {
 }
 
 // ---------- Media Session: التشغيل في الخلفية وأزرار شاشة القفل ----------
+function setPlaybackState(s) {
+  if ('mediaSession' in navigator) navigator.mediaSession.playbackState = s;
+}
+
 function setupMediaSession() {
   if (!('mediaSession' in navigator)) return;
   const ms = navigator.mediaSession;
