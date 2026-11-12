@@ -34,6 +34,9 @@
   `https://deploy-preview-[رقم الـ Pull Request]--nimble-vacherin-706c96.netlify.app`
   ورابط صفحة المعاينة (إطارا اللابتوب والجوال) بإضافة `/preview/` إليه:
   `https://deploy-preview-[رقم الـ Pull Request]--nimble-vacherin-706c96.netlify.app/preview/`
+- لا تسأل المستخدم بعد فتح الـ Pull Request إن كان يريد متابعته:
+  - إن كانت الميزة تغيّر شكل الشاشات: تابع فحص GitHub تلقائياً حتى تظهر نتيجة مقارنة اللقطات، وأصلح ما يفشل.
+  - وإلا فلا تتابع.
 
 ### الدمج
 - لا تدمج أبداً إلا إذا قال المستخدم: **اعتمد**.
