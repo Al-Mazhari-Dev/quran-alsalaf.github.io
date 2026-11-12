@@ -7,7 +7,7 @@ const side = (page) => page.locator('.sidemenu');
 test('البحث بنص الآية مع تطبيع الهمزات والتاء المربوطة، والانتقال إلى النتيجة، وسجل البحث', async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
   await clickTopbar(page, 'بحث في المصحف');
-  const box = page.getByPlaceholder('ابحث بنص الآية أو اسم السورة…');
+  const box = page.getByPlaceholder('ابحث بالكلمات أو الأرقام…');
   await expect(box).toBeFocused();
   // «اصحاب الكهف» بلا همزة، و«والرقيم»
   await box.fill('اصحاب الكهف والرقيم');
@@ -33,16 +33,56 @@ test('البحث بنص الآية مع تطبيع الهمزات والتاء �
 test('البحث باسم السورة والتاء المربوطة هاءً', async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
   await clickTopbar(page, 'بحث في المصحف');
-  await page.getByPlaceholder('ابحث بنص الآية أو اسم السورة…').fill('سوره البقره');
+  await page.getByPlaceholder('ابحث بالكلمات أو الأرقام…').fill('سوره البقره');
   await expect(page.locator('.searchov__sura')).toContainText(['سورة البقرة']);
   await page.locator('.searchov__sura').first().click();
   await expect.poll(() => shownPages(page)).toContain(2);
   // حرف واحد لا يبحث
   await clickTopbar(page, 'بحث في المصحف');
-  await page.getByPlaceholder('ابحث بنص الآية أو اسم السورة…').fill('ا');
+  await page.getByPlaceholder('ابحث بالكلمات أو الأرقام…').fill('ا');
   await expect(page.locator('.searchov__verse, .searchov__sura')).toHaveCount(0);
   await page.getByRole('button', { name: 'رجوع' }).click();
   await expect(page.locator('.searchov')).toHaveCount(0);
+});
+
+test('البحث بالأرقام: الصفحة ثم السورة ثم الجزء، بأرقام عربية أو إنجليزية، والانتقال إليها', async ({ page }) => {
+  await openApp(page, { 'hq.page': '1' });
+  await clickTopbar(page, 'بحث في المصحف');
+  const box = page.getByPlaceholder('ابحث بالكلمات أو الأرقام…');
+  const hits = page.locator('.searchov__numHit');
+
+  // ٣ (رقم واحد يكفي): ثلاث نتائج بالترتيب
+  await box.fill('٣');
+  await expect(hits).toHaveText(['٣الصفحة', '٣سورة آل عمران', '٣الجزء الثالث']);
+  await box.fill('3');
+  await expect(hits).toHaveText(['٣الصفحة', '٣سورة آل عمران', '٣الجزء الثالث']);
+  await expect(page.locator('.searchov__verse, .searchov__sura:not(.searchov__numHit)')).toHaveCount(0);
+
+  // الجزء الثالث ينقل إلى أول صفحة فيه (٤٢)
+  await hits.filter({ hasText: 'الجزء الثالث' }).click();
+  await expect(page.locator('.searchov')).toHaveCount(0);
+  await expect.poll(() => shownPages(page)).toContain(42);
+
+  // السورة الثالثة: أول صفحة فيها (٥٠)
+  await clickTopbar(page, 'بحث في المصحف');
+  await box.fill('3');
+  await hits.filter({ hasText: 'سورة آل عمران' }).click();
+  await expect.poll(() => shownPages(page)).toContain(50);
+
+  // ٥٢٣: الصفحة وحدها، وتُفتح بالضغط عليها
+  await clickTopbar(page, 'بحث في المصحف');
+  await box.fill('523');
+  await expect(hits).toHaveText(['٥٢٣الصفحة']);
+  await hits.click();
+  await expect.poll(() => shownPages(page)).toContain(523);
+
+  // يُحفظ في السجل، وما لا وجود له لا نتيجة له
+  await clickTopbar(page, 'بحث في المصحف');
+  await expect(page.locator('.searchov__histItem', { hasText: '523' })).toBeVisible();
+  await box.fill('٦٠٥');
+  await expect(hits).toHaveCount(0);
+  await box.fill('0');
+  await expect(hits).toHaveCount(0);
 });
 
 test('العلامات المرجعية: إضافة، وإعادة تسمية، ونقل، والانتقال، وحذف', async ({ page }) => {
