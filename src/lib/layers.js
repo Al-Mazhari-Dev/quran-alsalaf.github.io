@@ -13,8 +13,12 @@ function onKey(e) {
 }
 
 export const hasOpenLayer = () => stack.length > 0;
+// أهي هذه الطبقة آخر ما فُتح (فلا شيء فوقها)؟ — لمصحفٍ داخل طبقة كصفحة الختمة: يستقبل مفاتيح
+// التقليب ما دامت طبقته في الأعلى
+export const isTopLayer = (entry) => stack.length > 0 && stack[stack.length - 1] === entry;
 
 // onClose: ما يُغلق الطبقة. open: أهي مفتوحة الآن (الافتراضي نعم: المكوّن لا يُرسم إلا مفتوحًا)
+// وتُرجع مدخل الطبقة في الكومة (لـ isTopLayer)
 export function useLayer(onClose, open = true) {
   const ref = useRef(onClose);
   ref.current = onClose;
@@ -31,6 +35,7 @@ export function useLayer(onClose, open = true) {
       if (i >= 0) stack.splice(i, 1);
     };
   }, [open]);
+  return ref;
 }
 
 // الأجهزة التي تعمل بالفأرة (لها مؤشر دقيق يحوم) — تظهر فيها أزرار الفأرة الإضافية

@@ -3,16 +3,42 @@ import { toArabicDigits } from '../data/quran.js';
 import { verseLabel } from '../lib/study.js';
 import { BOOKMARK_COLORS, moveBookmark, removeBookmark, renameBookmark, setNote, useUserData } from '../lib/userdata.js';
 import RangePicker from './RangePicker.jsx';
+import KhatmaTab from './KhatmaTab.jsx';
 import './SideMenu.css';
 import { useLayer } from '../lib/layers.js';
 
 /*
   القائمة الجانبية (الفصل ٧): صفحة كاملة تنزلق من اليمين (أيقونتها في الشريط العلوي هناك)،
-  بثلاثة تبويبات: السور (فهرس)، الملاحظات (بترتيب ورودها في المصحف)، العلامات المرجعية.
+  بأربعة تبويبات في شريط أسفلها (٢٠٢٦-١١-١٢، كان أعلاها): الختمة، السور (فهرس)، العلامات المرجعية،
+  الملاحظات (بترتيب ورودها في المصحف). وتُفتح على آخر تبويب استعمله المستخدم.
   الضغط على سورة أو علامة ينقل مباشرة إلى موضعها ويُغلق القائمة.
 */
-export default function SideMenu({ quran, open, onGoto, onClose }) {
-  const [tab, setTab] = useState('suras');
+const TAB_KEY = 'hq.sideTab';
+const TABS = [
+  { id: 'khatma', name: 'الختمة', icon: 'M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5M12 6.5c2-1.5 5-2 8-1.5v13c-3-.5-6 0-8 1.5M12 6.5v13' },
+  { id: 'suras', name: 'السور', icon: 'M5 6.5h14M5 12h14M5 17.5h14' },
+  { id: 'bookmarks', name: 'العلامات', icon: 'M7 4.5h10v15l-5-3.6-5 3.6v-15Z' },
+  { id: 'notes', name: 'الملاحظات', icon: 'M5 19h3.5L18.5 9a2.1 2.1 0 0 0-3-3L5.5 16v3ZM13.5 8l3 3' },
+];
+const readTab = () => {
+  try {
+    const t = localStorage.getItem(TAB_KEY);
+    return TABS.some((x) => x.id === t) ? t : 'suras';
+  } catch {
+    return 'suras';
+  }
+};
+
+export default function SideMenu({ quran, open, onGoto, onClose, onReadWird, onToast }) {
+  const [tab, setTabState] = useState(readTab);
+  const setTab = (t) => {
+    setTabState(t);
+    try {
+      localStorage.setItem(TAB_KEY, t);
+    } catch {
+      // بلا تخزين: يبقى في هذه الجلسة
+    }
+  };
   useLayer(onClose, open);
   const user = useUserData();
   // الملاحظات مرتبة بترتيب الآيات في المصحف لا بوقت إضافتها
@@ -40,19 +66,9 @@ export default function SideMenu({ quran, open, onGoto, onClose }) {
           </button>
         </header>
 
-        <div className="sidemenu__tabs" role="tablist">
-          <button type="button" role="tab" aria-selected={tab === 'suras'} onClick={() => setTab('suras')}>
-            السور
-          </button>
-          <button type="button" role="tab" aria-selected={tab === 'notes'} onClick={() => setTab('notes')}>
-            الملاحظات
-          </button>
-          <button type="button" role="tab" aria-selected={tab === 'bookmarks'} onClick={() => setTab('bookmarks')}>
-            العلامات
-          </button>
-        </div>
-
         <div className="sidemenu__body">
+          {tab === 'khatma' && <KhatmaTab quran={quran} onRead={onReadWird} onToast={onToast} />}
+
           {tab === 'suras' && (
             <ul className="sidemenu__suras">
               {quran.suras.map((s) => (
@@ -89,6 +105,18 @@ export default function SideMenu({ quran, open, onGoto, onClose }) {
               <p className="sidemenu__empty">لا توجد علامات مرجعية بعد. اضغط ضغطًا مطوّلًا على آية ثم «علامة».</p>
             ))}
         </div>
+
+        {/* شريط التبويبات أسفل القائمة (بطلب صاحب المشروع)، فيُبدَّل بينها بالإبهام */}
+        <nav className="sidemenu__tabs" role="tablist" aria-label="أقسام القائمة">
+          {TABS.map((t) => (
+            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d={t.icon} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span>{t.name}</span>
+            </button>
+          ))}
+        </nav>
       </section>
     </div>
   );

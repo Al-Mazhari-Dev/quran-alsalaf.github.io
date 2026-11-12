@@ -12,6 +12,8 @@ import RangePicker from './components/RangePicker.jsx';
 import ListenSheet from './components/ListenSheet.jsx';
 import SideMenu from './components/SideMenu.jsx';
 import SearchOverlay from './components/SearchOverlay.jsx';
+import KhatmaPage from './components/KhatmaPage.jsx';
+import { completeWird, useKhatma, wirdState } from './lib/khatma.js';
 import { FOREVER, pause, play, resume, retarget, setSettings as setListenSettings, stop, usePlayer } from './lib/player.js';
 import { toArabicDigits } from './data/quran.js';
 import { pageVerses, verseLabel } from './lib/study.js';
@@ -41,6 +43,10 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sideMenuOpen, setSideMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  // صفحة ورد الختمة (٢٠٢٦-١١-١٢): تُفتح من تبويب الختمة في القائمة اليمنى، ويُرجَع منها إليه
+  const [khatmaOpen, setKhatmaOpen] = useState(false);
+  const khatma = useKhatma();
+  const wird = khatma.wird && !khatma.wird.finished ? wirdState(khatma.wird) : null;
   // الآية المميَّزة تمييزًا مؤقتًا بعد الانتقال إليها من البحث: { v: موضعها، n }
   const [flash, setFlash] = useState(null);
   // صفحة لوحة الإعدادات الظاهرة: الإعدادات نفسها، أو صفحة فرعية فيها («عن التطبيق»)
@@ -205,6 +211,7 @@ export default function App() {
     setReading(false);
   };
   const readingMarks = useMemo(() => ({ ...marks, range: null, playing: null }), [marks]);
+  const khatmaMarks = useMemo(() => ({ ...marks, range: null, playing: null, flash: null }), [marks]);
 
   const onLongPress = useCallback((v, rect) => {
     setChromeOpen(false);
@@ -292,6 +299,43 @@ export default function App() {
       // بلا سجل: سهم الرجوع وحده
     }
   }, []);
+  // صفحة الختمة: فتحها يغلق القائمة ويضيف خطوة إلى سجل المتصفح (فزرّ الرجوع في أندرويد يغلقها)،
+  // وإغلاقها بأي طريق يعيد القائمة على تبويب الختمة، فيُرى الورد التالي أو التهنئة
+  const openKhatma = useCallback(() => {
+    setSideMenuOpen(false);
+    setChromeOpen(false);
+    setKhatmaOpen(true);
+    try {
+      window.history.pushState({ hqKhatma: true }, '');
+    } catch {
+      // بلا سجل: تُغلق بزرّ الرجوع فيها
+    }
+  }, []);
+  const khatmaOpenRef = useRef(false);
+  khatmaOpenRef.current = khatmaOpen;
+  const afterKhatma = useCallback(() => {
+    setKhatmaOpen(false);
+    setSideMenuOpen(true);
+  }, []);
+  const closeKhatma = useCallback(() => {
+    if (window.history.state?.hqKhatma) window.history.back();
+    else afterKhatma();
+  }, [afterKhatma]);
+  useEffect(() => {
+    if (window.history.state?.hqKhatma) window.history.replaceState(null, '');
+    const onPop = () => {
+      if (!window.history.state?.hqKhatma && khatmaOpenRef.current) afterKhatma();
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [afterKhatma]);
+  const finishWird = () => {
+    const result = completeWird();
+    if (result === 'next') showToast('أحسنت، سجل الورد');
+    else if (result === 'finished') showToast('أتممت الختمة، تقبل الله منك');
+    closeKhatma();
+  };
+
   const openSideMenu = useCallback(() => {
     if (window.history.state?.hqSettings) window.history.go(-window.history.state.hqSettings);
     setSettingsOpen(false);
@@ -440,7 +484,7 @@ export default function App() {
 
   // ما دامت فوق المصحف صفحة أو قائمة أو بطاقة، فهو خارج التركيز ولوحة المفاتيح (inert)
   const covered =
-    studyOpen || settingsOpen || sideMenuOpen || searchOpen || !!pressed || !!picking || listenOpen;
+    studyOpen || settingsOpen || sideMenuOpen || searchOpen || !!pressed || !!picking || listenOpen || khatmaOpen;
   const chromeShown = chromeOpen && !covered;
 
   return (
@@ -582,7 +626,28 @@ export default function App() {
         onClose={closeSettings}
         onStartReading={startReading}
       />
-      {quran && <SideMenu quran={quran} open={sideMenuOpen} onGoto={gotoPageNumber} onClose={() => setSideMenuOpen(false)} />}
+      {quran && (
+        <SideMenu
+          quran={quran}
+          open={sideMenuOpen}
+          onGoto={gotoPageNumber}
+          onClose={() => setSideMenuOpen(false)}
+          onReadWird={openKhatma}
+          onToast={showToast}
+        />
+      )}
+      {quran && khatmaOpen && wird?.current && (
+        <KhatmaPage
+          key={wird.current[0]}
+          quran={quran}
+          wird={wird.current}
+          next={wird.doneToday}
+          onClose={closeKhatma}
+          onComplete={finishWird}
+          onLongPress={onLongPress}
+          marks={khatmaMarks}
+        />
+      )}
       {quran && searchOpen && <SearchOverlay quran={quran} onGoto={gotoPageNumber} onClose={() => setSearchOpen(false)} />}
       <div
         className={`study-backdrop${studyOpen && spread ? ' study-backdrop--open' : ''}`}
@@ -605,7 +670,7 @@ export default function App() {
           onClearRange={() => saveContentRange(null)}
         />
       )}
-      {quran && pressed && <VerseMenu quran={quran} pressed={pressed} onClose={() => setPressed(null)} onToast={showToast} onPlay={playFromVerse} onPlayAlone={playVerseAlone} />}
+      {quran && pressed && <VerseMenu quran={quran} pressed={pressed} onClose={() => setPressed(null)} onToast={showToast} onPlay={playFromVerse} onPlayAlone={playVerseAlone} noPlay={khatmaOpen} />}
       {quran && listenOpen && (
         <ListenSheet
           quran={quran}

@@ -19,7 +19,7 @@ test('القائمة الجانبية من اليمين بتبويباتها، �
   const card = await side(page).locator('.sidemenu__card').boundingBox();
   const vw = page.viewportSize().width;
   expect(card.x + card.width).toBeGreaterThan(vw - 2); // ملتصقة بالحافة اليمنى
-  await expect(side(page).getByRole('tab')).toHaveText(['السور', 'الملاحظات', 'العلامات']);
+  await expect(side(page).getByRole('tab')).toHaveText(['الختمة', 'السور', 'العلامات', 'الملاحظات']);
   await side(page).getByRole('button', { name: /سورة الكهف/ }).click();
   await expect(side(page)).not.toHaveClass(/sidemenu--open/);
   await expect.poll(() => shownPages(page)).toContain(293);
