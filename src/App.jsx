@@ -12,8 +12,7 @@ import RangePicker from './components/RangePicker.jsx';
 import ListenSheet from './components/ListenSheet.jsx';
 import SideMenu from './components/SideMenu.jsx';
 import SearchOverlay from './components/SearchOverlay.jsx';
-import AboutPage from './components/AboutPage.jsx';
-import { pause, play, resume, stop, usePlayer } from './lib/player.js';
+import { pause, play, resume, retarget, stop, usePlayer } from './lib/player.js';
 import { toArabicDigits } from './data/quran.js';
 import { pageVerses, verseLabel } from './lib/study.js';
 import { saveContentRange, saveRange, useUserData } from './lib/userdata.js';
@@ -40,7 +39,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sideMenuOpen, setSideMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
+  // صفحة لوحة الإعدادات الظاهرة: الإعدادات نفسها، أو صفحة فرعية فيها («عن التطبيق»)
+  const [settingsPage, setSettingsPage] = useState('main');
   // صفحات المحتوى (تفسير · معاني الكلمات · العمل بالآيات): تُفتح بزرّها في الشريط السفلي —
   // صفحة كاملة في عرض الصفحة الواحدة، ولوحة متمركزة في عرض الصفحتين (الفصل ٥)
   const [studyOpen, setStudyOpen] = useState(false);
@@ -51,8 +51,8 @@ export default function App() {
   const [spread, setSpread] = useState(false);
   const shownPages = useMemo(() => (spread ? [spreadStart(page), spreadStart(page) + 1] : [page]), [spread, page]);
   const user = useUserData();
-  // المقداران المستقلان (٢٠٢٦-١١-١٠): مقدار الاستماع (ويتبعه إخفات ما خارجه في المصحف)،
-  // ومقدار صفحات المحتوى. وكلاهما إن لم يكتمل فالمعتمد آيات الصفحة الظاهرة، أو الصفحتين
+  // المقداران المستقلان (٢٠٢٦-١١-١٠): مقدار الاستماع، ومقدار صفحات المحتوى (ويتبعه
+  // إخفات ما خارجه في المصحف). وكلاهما إن لم يكتمل فالمعتمد آيات الصفحة الظاهرة، أو الصفحتين
   // الظاهرتين معًا من أول اليمنى إلى آخر اليسرى
   const selection = user.range?.length === 2 ? user.range : null;
   const contentSel = user.contentRange?.length === 2 ? user.contentRange : null;
@@ -84,7 +84,9 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // الاستماع (الفصل ٦): المقدار المسموع مقدار الاستماع المحدد، وإلا الصفحة أو الصفحتان الظاهرتان
+  // الاستماع (الفصل ٦): المقدار المسموع مقدار الاستماع المحدد. وبلا مقدار (٢٠٢٦-١١-١١): من أول الصفحة
+  // الظاهرة (أو أول اليمنى من الصفحتين) متتابعًا إلى آخر المصحف، يقلّب الصفحات معه بلا توقف ولا تكرار
+  // للمقدار. والتنزيل بلا مقدار يبقى للصفحة أو الصفحتين الظاهرتين (range)
   const player = usePlayer();
   const [listenOpen, setListenOpen] = useState(false);
   const listenSuras = useMemo(() => (quran ? [...new Set(range.map((v) => quran.verses[v].s))] : []), [quran, range]);
@@ -93,35 +95,65 @@ export default function App() {
     (selection
       ? verseLabel(quran, selection)
       : spread
-        ? `الصفحتان ${toArabicDigits(shownPages[0])}–${toArabicDigits(shownPages[1])}`
-        : `الصفحة ${toArabicDigits(page)}`);
-  const startListening = async () => {
-    const result = await play(quran, range);
-    if (result === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
-    else if (result === 'ok') setListenOpen(false);
-    // 'failed': رسالة الخطأ تظهر من التأثير أعلاه (player.error). 'cancelled': تجاوزه طلب أحدث.
+        ? `من الصفحتين ${toArabicDigits(shownPages[0])}–${toArabicDigits(shownPages[1])} متتابعًا`
+        : `من الصفحة ${toArabicDigits(page)} متتابعًا`);
+  // ما يُشغَّل: المقدار المحدد، وإلا من أول الآيات الظاهرة إلى آخر المصحف
+  const playVerses = () =>
+    selection ? range : Array.from({ length: quran.verses.length - shownVerses[0] }, (_, i) => shownVerses[0] + i);
+  // مقدار الاستماع الذي بدأ به التشغيل الجاري: إن عُدِّل أثناءه طُبِّق عند إغلاق نافذة الاستماع («تم»)
+  const playedSel = useRef(null);
+  const sameSel = (a, b) => a?.[0] === b?.[0] && a?.[1] === b?.[1];
+  // نقل المصحف إلى صفحة آية إن لم تكن ظاهرة: صفحتها في عرض الصفحة الواحدة، وزوجها في عرض الصفحتين
+  // (Reader يحوّل الصفحة إلى أول زوجها)
+  const showVerse = (v) => {
+    const p = quran.verses[v].p;
+    if (!shownPages.includes(p)) setGotoPage({ page: p, n: Date.now() });
+  };
+  const startListening = () => {
+    playedSel.current = selection;
+    // الانتقال إلى بداية المقدار (٢٠٢٦-١١-١١): من أول ضغطة تشغيل، قبل أن يبدأ الصوت، ينتقل المصحف إلى
+    // صفحة أول آية في مقدار الاستماع إن كان بعيدًا عن الظاهر. وبلا مقدار يبدأ من الظاهر فلا انتقال
+    if (selection) showVerse(selection[0]);
+    // play() ترجع 'unsupported' أو 'playing' (src/lib/player.js)، ونافذة الاستماع تبقى مفتوحة كما كانت
+    if (play(quran, playVerses(), !selection) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
+    // أخطاء التشغيل نفسه تظهر من التأثير أدناه (player.error)
+  };
+  // إغلاق نافذة الاستماع أثناء التشغيل بعد تعديل المقدار: الآية الجارية خارج المقدار الجديد ⇐ يبدأ من
+  // أوله بعدّاد تكرار جديد؛ وداخله ⇐ يكمل من حيث هو وينتهي عند النهاية الجديدة (retarget)
+  const closeListen = () => {
+    setListenOpen(false);
+    if (player.status === 'idle' || sameSel(selection, playedSel.current)) return;
+    playedSel.current = selection;
+    if (retarget(quran, playVerses(), !selection) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
   };
   useEffect(() => {
     if (player.error) showToast(player.error.text);
   }, [player.error, showToast]);
-  // تقليب الصفحة تلقائيًا مع أول آية في الصفحة التالية (وفي الزوج: لا يتحرك المصحف حتى يبدأ
-  // القارئ أول آية في الزوج التالي، لأن الانتقال إلى صفحة من الزوج الظاهر لا يغيّره)
+  // التقليب التلقائي: عند بدء كل آية (ومنها إعادة المقدار وتكرار الآية) إن لم تكن صفحتها ظاهرة انتقل
+  // المصحف إليها — صفحةً في عرض الصفحة الواحدة، وزوجًا في عرض الصفحتين (فالانتقال إلى صفحة من الزوج
+  // الظاهر لا يغيّره). ويُقارَن بالصفحات الظاهرة فعلًا لا بآخر صفحة طُلبت، فإن قلّب المستخدم بيده أعاده
+  // إلى صفحة القارئ عند بدء الآية التالية. (كان يُقارَن بآخر صفحة طلبها التقليب نفسه، فإذا قلّب المستخدم
+  // بيده لم يعُد المصحف إلى القارئ ما دامت الآيات في تلك الصفحة.)
+  const shownRef = useRef(shownPages);
+  shownRef.current = shownPages;
   useEffect(() => {
-    if (quran && player.v != null) {
-      const p = quran.verses[player.v].p;
-      setGotoPage((g) => (g?.page === p ? g : { page: p, n: Date.now() }));
-    }
-  }, [quran, player.v]);
+    if (!quran || player.v == null) return;
+    const p = quran.verses[player.v].p;
+    if (!shownRef.current.includes(p)) setGotoPage({ page: p, n: Date.now() });
+  }, [quran, player.v, player.n]);
 
+  // الإخفات (٢٠٢٦-١١-١١): يتبع مقدار صفحات المحتوى وحده، فيُخفت في المصحف ما خارجه ويزول بإلغائه،
+  // ولو أثناء الاستماع. ومقدار الاستماع لا يُخفت شيئًا؛ والآية الجارية مظلَّلة، وإن كانت خارج مقدار
+  // صفحات المحتوى بقي نصّها شفافًا وتظليلها خلفه (MushafPage.css)
   const marks = useMemo(
-    () => ({ notes: user.notes, bookmarks: user.bookmarks, range: selection, selected: pressed?.v ?? null, playing: player.v }),
-    [user.notes, user.bookmarks, selection?.[0], selection?.[1], pressed?.v, player.v]
+    () => ({ notes: user.notes, bookmarks: user.bookmarks, range: contentSel, selected: pressed?.v ?? null, playing: player.v }),
+    [user.notes, user.bookmarks, contentSel?.[0], contentSel?.[1], pressed?.v, player.v]
   );
 
   // دخول وضع القراءة من الإعدادات: يُوقَف الصوت بهدوء (الاستماع وتحديد المقدار لا يعملان فيه)،
   // ثم يبدأ التدفق من الصفحة الحالية. والخروج يعيد المصحف العادي على الصفحة التي في منتصف الشاشة
   const startReading = () => {
-    setSettingsOpen(false);
+    closeSettings();
     setChromeOpen(false);
     if (player.status !== 'idle') stop();
     setReading(true);
@@ -139,8 +171,10 @@ export default function App() {
     setPressed({ v, rect });
   }, []);
 
-  // اختيار آية من المنتقي: البداية ثم النهاية، كلٌّ في مقداره. ومقدار الاستماع يعود بالمصحف
-  // إلى آيته (ليُرى ما خارجه مُخفتًا)، ومقدار صفحات المحتوى يبقى المصحف خلفها مكانه
+  // اختيار آية من المنتقي: البداية ثم النهاية، كلٌّ في مقداره. واختيار البداية وحده لا يحرّك المصحف.
+  // ومقدار الاستماع لا يحرّكه عند التحديد أصلًا (ينتقل عند التشغيل، startListening). أما مقدار صفحات
+  // المحتوى (٢٠٢٦-١١-١١، بدل إبقاء المصحف مكانه): عند اكتماله ينتقل المصحف خلف صفحات المحتوى إلى صفحة
+  // أول آية فيه (وزوجها في عرض الصفحتين)، فإذا أغلقها وجد المقدار أمامه وما خارجه مُخفَت
   const pickVerse = (v) => {
     const content = picking.target === 'content';
     const save = content ? saveContentRange : saveRange;
@@ -148,8 +182,8 @@ export default function App() {
     else {
       const s = (content ? user.contentRange : user.range)[0];
       save(v < s ? [v, s] : [s, v]);
+      if (content) showVerse(Math.min(v, s));
     }
-    if (!content) setGotoPage({ page: quran.verses[v].p, n: Date.now() });
     setPicking(null);
   };
 
@@ -176,6 +210,63 @@ export default function App() {
       if (window.history.state?.hqStudy) return;
       setStudyOpen(false);
       setPicking((p) => (p?.target === 'content' ? null : p));
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  // لوحة الإعدادات (يسارًا) والقائمة الجانبية (يمينًا) لا تُفتحان معًا: فتح إحداهما يغلق الأخرى.
+  // فتح الإعدادات يضيف خطوة إلى سجل المتصفح (وصفحتها الفرعية خطوة ثانية)، فزرّ الرجوع في أندرويد
+  // يرجع من «عن التطبيق» إلى الإعدادات ثم يغلقها. وكل إغلاق آخر (✕، النقر خارجها، السحب، Esc)
+  // يرجع في السجل بقدر خطواتها
+  const openSettings = useCallback(() => {
+    setSideMenuOpen(false);
+    setChromeOpen(false);
+    setSettingsPage('main');
+    setSettingsOpen(true);
+    try {
+      if (!window.history.state?.hqSettings) window.history.pushState({ hqSettings: 1 }, '');
+    } catch {
+      // بلا سجل (نادر): تُغلق بأزرارها وحدها
+    }
+  }, []);
+  const closeSettings = useCallback(() => {
+    const depth = window.history.state?.hqSettings;
+    if (depth) window.history.go(-depth);
+    else {
+      setSettingsOpen(false);
+      setSettingsPage('main');
+    }
+  }, []);
+  const showSettingsPage = useCallback((next) => {
+    const depth = window.history.state?.hqSettings;
+    if (next === 'main') {
+      if (depth === 2) window.history.back();
+      else setSettingsPage('main');
+      return;
+    }
+    setSettingsPage(next);
+    try {
+      if (depth === 1) window.history.pushState({ hqSettings: 2 }, '');
+    } catch {
+      // بلا سجل: سهم الرجوع وحده
+    }
+  }, []);
+  const openSideMenu = useCallback(() => {
+    if (window.history.state?.hqSettings) window.history.go(-window.history.state.hqSettings);
+    setSettingsOpen(false);
+    setSettingsPage('main');
+    setSideMenuOpen(true);
+  }, []);
+  useEffect(() => {
+    if (window.history.state?.hqSettings) window.history.replaceState(null, '');
+    const onPop = () => {
+      const depth = window.history.state?.hqSettings;
+      if (depth === 1) setSettingsPage('main');
+      else if (!depth) {
+        setSettingsOpen(false);
+        setSettingsPage('main');
+      }
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -292,7 +383,7 @@ export default function App() {
 
   // ما دامت فوق المصحف صفحة أو قائمة أو بطاقة، فهو خارج التركيز ولوحة المفاتيح (inert)
   const covered =
-    studyOpen || settingsOpen || sideMenuOpen || searchOpen || aboutOpen || !!pressed || !!picking || listenOpen;
+    studyOpen || settingsOpen || sideMenuOpen || searchOpen || !!pressed || !!picking || listenOpen;
   const chromeShown = chromeOpen && !covered;
 
   return (
@@ -312,7 +403,7 @@ export default function App() {
           inert={chromeShown ? undefined : ''}
         >
           {/* أيقونة القائمة الجانبية أعلى اليمين (الفصل ٧): فهرس السور، الملاحظات، العلامات */}
-          <button className="topbar__icon" type="button" onClick={() => setSideMenuOpen(true)} disabled={!quran} aria-label="القائمة">
+          <button className="topbar__icon" type="button" onClick={openSideMenu} disabled={!quran} aria-label="القائمة">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
             </svg>
@@ -327,8 +418,8 @@ export default function App() {
             <span>بحث في المصحف</span>
           </button>
 
-          {/* الإعدادات، وفيها تبديل الوضع الفاتح والداكن (بطلب صاحب المشروع) */}
-          <button className="topbar__icon" type="button" onClick={() => setSettingsOpen(true)} aria-label="الإعدادات">
+          {/* الإعدادات أعلى اليسار مقابل القائمة: لوحة جانبية من اليسار، وفيها تبديل الوضع الفاتح والداكن */}
+          <button className="topbar__icon" type="button" onClick={openSettings} aria-label="الإعدادات">
             <SettingsIcon />
           </button>
         </header>
@@ -414,16 +505,14 @@ export default function App() {
 
       <SettingsSheet
         open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        panel={spread}
+        page={settingsPage}
+        onPage={showSettingsPage}
+        onClose={closeSettings}
         onStartReading={startReading}
-        onShowAbout={() => {
-          setSettingsOpen(false);
-          setAboutOpen(true);
-        }}
       />
       {quran && <SideMenu quran={quran} open={sideMenuOpen} onGoto={gotoPageNumber} onClose={() => setSideMenuOpen(false)} />}
       {quran && searchOpen && <SearchOverlay quran={quran} onGoto={gotoPageNumber} onClose={() => setSearchOpen(false)} />}
-      <AboutPage open={aboutOpen} onClose={() => setAboutOpen(false)} />
       <div
         className={`study-backdrop${studyOpen && spread ? ' study-backdrop--open' : ''}`}
         onClick={closeStudy}
@@ -450,6 +539,7 @@ export default function App() {
         <ListenSheet
           quran={quran}
           verses={range}
+          continuous={!selection}
           label={listenLabel}
           suras={listenSuras}
           range={user.range}
@@ -457,7 +547,7 @@ export default function App() {
           onPickEnd={() => setPicking({ target: 'listen', mode: 'end' })}
           onClearRange={() => saveRange(null)}
           onPlay={startListening}
-          onClose={() => setListenOpen(false)}
+          onClose={closeListen}
           onToast={showToast}
         />
       )}

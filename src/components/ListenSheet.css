@@ -118,7 +118,7 @@
   margin: -4px 4px 0;
   font-size: var(--text-xs);
   line-height: 1.7;
-  color: #c0392b;
+  color: var(--danger);
 }
 
 .listen__note {
@@ -198,7 +198,7 @@
 }
 
 .listen__download--active {
-  color: var(--accent);
+  color: var(--accent-text);
   border-color: var(--accent);
   background: var(--accent-soft);
 }
@@ -220,7 +220,7 @@
   height: 40px;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: #2e7d32;
+  color: var(--success);
 }
 
 .listen__downloaded svg {
@@ -238,4 +238,9 @@
     padding: 10px 14px 12px;
     gap: 8px;
   }
+}
+
+/* «تكرار المقدار» بلا مقدار محدد: الاستماع متتابع إلى آخر المصحف، فلا مقدار يُكرَّر */
+.listen__row--off {
+  opacity: 0.45;
 }

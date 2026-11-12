@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toArabicDigits } from '../data/quran.js';
-import { covers, reciterById } from '../lib/reciters.js';
+import { covers, reciterById, reciterTitle } from '../lib/reciters.js';
 import { FOREVER, REPEATS, cancelDownload, downloadRange, isDownloaded, setSettings, usePlayer } from '../lib/player.js';
 import ReciterPicker from './ReciterPicker.jsx';
 import RangeBar from './RangeBar.jsx';
@@ -11,11 +11,13 @@ import { useLayer } from '../lib/layers.js';
   إعدادات الاستماع (الفصل ٦): بطاقة تنزلق من أسفل الشاشة عند الخانة اليمنى —
   القارئ (يُفتح من صفه قائمة كاملة، لا قائمة منسدلة)، وتكرار الآية، وتكرار المقدار
   (ومعه «بلا نهاية»)، ثم زرّ التشغيل الفوري، وتحته تنزيل منفصل اختياري للاستماع بلا إنترنت.
-  label: وصف المقدار المسموع (مقدار الاستماع المحدد، وإلا الصفحة أو الصفحتان الظاهرتان)، suras: سوره.
+  continuous: لا مقدار محدد، فالاستماع متتابع من الصفحة الظاهرة إلى آخر المصحف بلا تكرار للمقدار
+  (فيُعطَّل «تكرار المقدار»)، وverses آيات الصفحة أو الصفحتين الظاهرتين للتنزيل وحده.
+  label: وصف المقدار المسموع (مقدار الاستماع المحدد، وإلا «من الصفحة … متتابعًا»)، suras: سوره.
   وفي أعلاها شريط «تحديد مقدار الآيات» خاص بالاستماع (٢٠٢٦-١١-١٠): range وonPickStart/onPickEnd/onClearRange،
-  مستقل عن مقدار صفحات المحتوى، وبه وحده يُخفت ما خارجه في المصحف.
+  مستقل عن مقدار صفحات المحتوى، ولا يُخفت شيئًا في المصحف. وتعديله أثناء التشغيل يُطبَّق عند الإغلاق («تم»).
 */
-export default function ListenSheet({ quran, verses, label, suras, range, onPickStart, onPickEnd, onClearRange, onPlay, onClose, onToast }) {
+export default function ListenSheet({ quran, verses, continuous, label, suras, range, onPickStart, onPickEnd, onClearRange, onPlay, onClose, onToast }) {
   const player = usePlayer();
   const { settings, download } = player;
   const active = player.status !== 'idle';
@@ -58,11 +60,11 @@ export default function ListenSheet({ quran, verses, label, suras, range, onPick
         <button type="button" className="listen__row listen__row--link" onClick={() => setPickerOpen(true)}>
           <span>القارئ</span>
           <span className="listen__value">
-            {missing ? 'اختر قارئًا' : chosen.name}
+            {missing ? 'اختر قارئًا' : reciterTitle(chosen)}
             <ChevronIcon />
           </span>
         </button>
-        {missing && <p className="listen__warn">تسجيل {chosen.name} لا يشمل هذا الموضع؛ اختر قارئًا آخر.</p>}
+        {missing && <p className="listen__warn">تسجيل {reciterTitle(chosen)} لا يشمل هذا الموضع؛ اختر قارئًا آخر.</p>}
 
         <label className="listen__row">
           <span>تكرار الآية</span>
@@ -76,9 +78,9 @@ export default function ListenSheet({ quran, verses, label, suras, range, onPick
           </select>
         </label>
 
-        <label className="listen__row">
+        <label className={`listen__row${continuous ? ' listen__row--off' : ''}`}>
           <span>تكرار المقدار</span>
-          <select value={settings.rangeRepeat} onChange={(e) => setSettings({ rangeRepeat: Number(e.target.value) })}>
+          <select disabled={continuous} title={continuous ? 'حدّد مقدارًا لتكراره' : undefined} value={continuous ? 1 : settings.rangeRepeat} onChange={(e) => setSettings({ rangeRepeat: Number(e.target.value) })}>
             <option value={1}>بدون تكرار</option>
             {REPEATS.map((n) => (
               <option key={n} value={n}>

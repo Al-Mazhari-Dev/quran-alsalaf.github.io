@@ -10,7 +10,7 @@
 //     بصوت القارئ نفسه
 //   • التشغيل في الخلفية وأزرار شاشة القفل عبر Media Session
 import { useSyncExternalStore } from 'react';
-import { ayahUrl, covers, reciterById } from './reciters.js';
+import { ayahUrl, covers, reciterById, reciterTitle } from './reciters.js';
 
 const KEY = 'hq.listen';
 // ١ (بدون تكرار) يُعرض بعبارته لا رقمه؛ فالقائمة العددية تبدأ من ٢ (بطلب صاحب المشروع)
@@ -29,8 +29,9 @@ function readSettings() {
 
 // ---------- الحالة المعلنة لواجهة التطبيق ----------
 // status: 'idle' | 'loading' | 'playing' | 'paused' — v: الآية الجاري تلاوتها
+// n: يُزاد عند بدء كل مقطع (آية أو بسملة أو إعادتها)، فيُعرف به بدء الآية التالية ولو كانت هي نفسها
 // download: null أو { active, done, fileIndex, fileCount, pct } — تقدّم التنزيل المنفصل
-let state = { status: 'idle', v: null, settings: readSettings(), error: null, download: null };
+let state = { status: 'idle', v: null, n: 0, settings: readSettings(), error: null, download: null };
 const listeners = new Set();
 function set(patch) {
   state = { ...state, ...patch };
@@ -49,6 +50,7 @@ let queue = []; // آيات النطاق (أرقامها في المصحف)
 let pos = 0; // موضع الآية الجارية في النطاق
 let verseRep = 0; // كم مرة قُرئت الآية الجارية
 let rangeRep = 0; // كم مرة قُرئ النطاق
+let continuous = false; // استماع بلا مقدار: من الصفحة الظاهرة متتابعًا إلى آخر المصحف، بلا تكرار للمقدار
 let seg = null; // المقطع الجاري: { v, s, a, basmala }
 let gen = 0; // يُزاد عند كل تشغيل أو إيقاف جديد، فيُهمل ما تأخر من طلبات تشغيل سابقة
 let dlToken = 0; // يُزاد عند كل تنزيل أو إلغاء، مستقل عن gen، فلا يقطع أحدهما الآخر
@@ -163,20 +165,40 @@ export function isDownloaded(q, verses) {
   return resourcesFor(verses).every((f) => blobUrls.has(f));
 }
 
-// يبدأ الاستماع لآيات verses فورًا: من ملف منزَّل إن وُجد، وإلا بثًّا مباشرًا.
-// النتيجة: false إن كان القارئ المختار لا يشمل تسجيلُه موضعها
-export function play(q, verses) {
+// يبدأ الاستماع لآيات verses فورًا: من ملف منزَّل إن وُجد، وإلا بثًّا مباشرًا. النتيجة:
+// 'unsupported' (القارئ المختار لا يشمل تسجيلُه موضعها، كما في downloadRange) · 'playing'
+// cont: استماع متتابع بلا مقدار (verses من أول الصفحة الظاهرة إلى آخر المصحف): لا يُكرَّر، ويقف في آخره
+export function play(q, verses, cont = false) {
   quran = q;
   const r = reciterById(state.settings.reciter);
-  if (!covers(r, suraList(verses))) return false;
+  if (!covers(r, suraList(verses))) return 'unsupported';
   ++gen;
   queue = verses;
+  continuous = cont;
   pos = 0;
   verseRep = 0;
   rangeRep = 0;
   set({ error: null });
   startVerse(true);
-  return true;
+  return 'playing';
+}
+
+// تعديل المقدار أثناء التشغيل (عند إغلاق نافذة الاستماع بعد تعديله): إن بقيت الآية الجارية داخل
+// المقدار الجديد أكمل منها بلا انقطاع وانتهى عند نهايته الجديدة، بعدّاد التكرار نفسه؛ وإلا بدأ من
+// أول آية فيه بعدّاد تكرار جديد. النتيجة كـplay()، أو 'continued' إن أكمل من حيث هو
+export function retarget(q, verses, cont = false) {
+  if (state.status === 'idle') return 'idle';
+  const at = verses.indexOf(queue[pos]);
+  if (at < 0) return play(q, verses, cont);
+  quran = q;
+  if (!covers(reciterById(state.settings.reciter), suraList(verses))) {
+    stop();
+    return 'unsupported';
+  }
+  queue = verses;
+  continuous = cont;
+  pos = at;
+  return 'continued';
 }
 
 const suraList = (verses) => [...new Set(verses.map((v) => quran.verses[v].s))];
@@ -193,7 +215,7 @@ function playSegment(next) {
   const el = ensureAudio();
   const r = reciterById(state.settings.reciter);
   seg = next;
-  set({ status: el.paused ? 'loading' : 'playing', v: next.v });
+  set({ status: el.paused ? 'loading' : 'playing', v: next.v, n: state.n + 1 });
   updateMetadata();
   // ملف منزَّل مسبقًا فيُشغَّل مباشرة، وإلا فبثّ مباشر من الشبكة
   el.src = resolveUrl(ayahUrl(r, next.s, next.a));
@@ -222,6 +244,7 @@ function segmentDone() {
   if (++verseRep < verseRepeat) return startVerse(false);
   verseRep = 0;
   if (++pos >= queue.length) {
+    if (continuous) return stop();
     pos = 0;
     if (rangeRepeat !== FOREVER && ++rangeRep >= rangeRepeat) return stop();
   }
@@ -275,8 +298,10 @@ export function setSettings(patch) {
       stop();
       return false;
     }
+    // نفس الموضع بصوت القارئ الجديد: البسملة إن كانت هي الجارية، وإلا الآية نفسها
+    const inBasmala = !!seg?.basmala;
     seg = null;
-    startVerse(false);
+    startVerse(inBasmala);
   }
   return true;
 }
@@ -306,7 +331,7 @@ function updateMetadata() {
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: `سورة ${quran.suras[verse.s - 1].name} — الآية ${verse.a}`,
-      artist: r.name,
+      artist: reciterTitle(r),
       album: 'قرآن السلف',
       artwork: [{ src: `${import.meta.env.BASE_URL}icons/icon-512.png`, sizes: '512x512', type: 'image/png' }],
     });

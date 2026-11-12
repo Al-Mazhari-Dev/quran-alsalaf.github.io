@@ -1,53 +1,38 @@
 import './AboutPage.css';
-import { useLayer } from '../lib/layers.js';
 
 /*
-  صفحة «عن التطبيق» (الفصل ١٢): نصّها حرفي كما في المواصفة، بلا أي تعديل ولا أي مصدر آخر
+  محتوى «عن التطبيق» (الفصل ١٢) — صفحة فرعية داخل لوحة الإعدادات (٢٠٢٦-١١-١١، SettingsSheet.jsx): نصّها حرفي كما في المواصفة، بلا أي تعديل ولا أي مصدر آخر
   مذكور (قرار صريح من صاحب المشروع) — لا القرّاء، ولا مصدر التفسير، ولا التصنيف الموضوعي.
   التنسيق وحده تحسَّن (بطلب صاحب المشروع ٢٠٢٦-٠٩-٢٤): شعار أعلاها، وبطاقة للمصدر بلا عنوان
   «المصادر» (بقي نصّ المصدر نفسه)، وزرّ لقناة تليجرام بدل رابط نصّي خام.
 */
-export default function AboutPage({ open, onClose }) {
-  useLayer(onClose, open);
+export default function AboutContent() {
   return (
-    <div className={`about${open ? ' about--open' : ''}`} aria-hidden={!open} inert={open ? undefined : ''}>
-      <section className="about__card" role="dialog" aria-modal="true" aria-label="عن التطبيق">
-        <header className="about__head">
-          <button className="about__back" type="button" onClick={onClose} aria-label="رجوع">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <h2>عن التطبيق</h2>
-        </header>
+    <div className="about__body">
+      <img className="about__logo" src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" />
+      <h1 className="about__title">قرآن السلف</h1>
 
-        <div className="about__body">
-          <img className="about__logo" src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" />
-          <h1 className="about__title">قرآن السلف</h1>
+      <p>
+        تطبيق قرآن السلف يجمع بين حفظ اللفظ وفهم المعنى والعمل بالآيات، على نهج الصحابة رضي الله عنهم في
+        تلقّي القرآن؛ فقد كانوا يتعلمون العشر آيات، فلا يتجاوزونها حتى يتعلموا ما فيها من العلم والعمل.
+      </p>
+      <p>
+        ويقدّم التطبيق المصحف كاملًا للقراءة والاستماع، مع تفسير الآيات ومعاني كلماتها والعمل بها في الأجزاء المقرّرة
+        في برنامج حلقات حفظ القرآن بطريقة السلف للأشبال.
+      </p>
 
-          <p>
-            تطبيق قرآن السلف يجمع بين حفظ اللفظ وفهم المعنى والعمل بالآيات، على نهج الصحابة رضي الله عنهم في
-            تلقّي القرآن؛ فقد كانوا يتعلمون العشر آيات، فلا يتجاوزونها حتى يتعلموا ما فيها من العلم والعمل.
-          </p>
-          <p>
-            ويقدّم التطبيق المصحف كاملًا للقراءة والاستماع، مع تفسير الآيات ومعاني كلماتها والعمل بها في الأجزاء المقرّرة
-            في برنامج حلقات حفظ القرآن بطريقة السلف للأشبال.
-          </p>
+      <div className="about__source">
+        <BookIcon />
+        <p>نص المصحف وخط الرسم العثماني (رواية حفص عن عاصم) من مجمع الملك فهد لطباعة المصحف الشريف.</p>
+      </div>
 
-          <div className="about__source">
-            <BookIcon />
-            <p>نص المصحف وخط الرسم العثماني (رواية حفص عن عاصم) من مجمع الملك فهد لطباعة المصحف الشريف.</p>
-          </div>
-
-          <a className="about__telegram" href="https://t.me/quraangroup" target="_blank" rel="noopener noreferrer">
-            <TelegramIcon />
-            <span>
-              تابعونا على تليجرام
-              <small>قناة حفظ القرآن بطريقة السلف</small>
-            </span>
-          </a>
-        </div>
-      </section>
+      <a className="about__telegram" href="https://t.me/quraangroup" target="_blank" rel="noopener noreferrer">
+        <TelegramIcon />
+        <span>
+          تابعونا على تليجرام
+          <small>قناة حفظ القرآن بطريقة السلف</small>
+        </span>
+      </a>
     </div>
   );
 }

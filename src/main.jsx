@@ -15,10 +15,9 @@ import '@fontsource/amiri/700.css';
 import './styles/tokens.css';
 import './styles/global.css';
 import App from './App.jsx';
-import { initTheme } from './lib/theme.js';
 import { applyWeeksTint } from './lib/settings.js';
 
-initTheme();
+// المظهر (الخلفية واللون) طُبِّق قبل الرسم في سكربت index.html — src/lib/appearance.js
 applyWeeksTint(); // تمييز مقررات الأسابيع كما اختاره المستخدم في الإعدادات (ملغى افتراضيًّا)
 
 createRoot(document.getElementById('root')).render(

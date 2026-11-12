@@ -70,7 +70,7 @@
   background: var(--surface-2);
   font-size: var(--text-base);
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .rpick__sura h3 span {
