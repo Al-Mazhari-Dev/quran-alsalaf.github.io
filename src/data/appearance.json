@@ -10,8 +10,15 @@
     { "id": "emerald", "name": "أخضر زمردي", "light": "#2A7350", "dark": "#6CC59A" },
     { "id": "amber", "name": "ذهبي عنبري", "light": "#8A6110", "dark": "#E2B65A" },
     { "id": "maroon", "name": "عنّابي", "light": "#8C2F3C", "dark": "#E8939D" },
-    { "id": "mauve", "name": "موف", "light": "#6A4C9C", "dark": "#B9A2E0" }
+    {
+      "id": "none", "name": "بلا لون", "ink": true,
+      "mix": {
+        "light": { "soft": 7, "soft-strong": 12, "week-a": 5, "week-b": 10, "playing": 26, "decor-fill": 16 },
+        "dark": { "soft": 10, "soft-strong": 16, "week-a": 6, "week-b": 12, "playing": 24, "decor-fill": 22 }
+      }
+    }
   ],
+  "replaced": { "mauve": "none" },
   "defaults": { "light": "beige", "dark": "gray", "accent": "blue" },
   "mix": {
     "light": { "surface": 3, "surface-2": 5.5, "surface-3": 8.5, "border": 11, "border-strong": 18, "muted": 74, "faint": 52, "soft": 10, "soft-strong": 17, "week-a": 7, "week-b": 15, "playing": 38, "decor-fill": 22, "decor-dot": 30 },

@@ -11,7 +11,8 @@ import { useLayer } from '../lib/layers.js';
   إعدادات الاستماع (الفصل ٦): بطاقة تنزلق من أسفل الشاشة عند الخانة اليمنى —
   القارئ (يُفتح من صفه قائمة كاملة، لا قائمة منسدلة)، وتكرار الآية، وتكرار المقدار
   (ومعه «بلا نهاية»)، ثم زرّ التشغيل الفوري، وتحته تنزيل منفصل اختياري للاستماع بلا إنترنت.
-  continuous: لا مقدار محدد، فالاستماع متتابع من الصفحة الظاهرة إلى آخر المصحف بلا تكرار للمقدار
+  continuous: لا مقدار كامل، فالاستماع متتابع إلى آخر المصحف بلا تكرار للمقدار — من آية البداية إن حُددت
+  وحدها (٢٠٢٦-١١-١٢)، وإلا من الصفحة الظاهرة
   (فيُعطَّل «تكرار المقدار»)، وverses آيات الصفحة أو الصفحتين الظاهرتين للتنزيل وحده.
   label: وصف المقدار المسموع (مقدار الاستماع المحدد، وإلا «من الصفحة … متتابعًا»)، suras: سوره.
   وفي أعلاها شريط «تحديد مقدار الآيات» خاص بالاستماع (٢٠٢٦-١١-١٠): range وonPickStart/onPickEnd/onClearRange،
@@ -80,7 +81,7 @@ export default function ListenSheet({ quran, verses, continuous, label, suras, r
 
         <label className={`listen__row${continuous ? ' listen__row--off' : ''}`}>
           <span>تكرار المقدار</span>
-          <select disabled={continuous} title={continuous ? 'حدّد مقدارًا لتكراره' : undefined} value={continuous ? 1 : settings.rangeRepeat} onChange={(e) => setSettings({ rangeRepeat: Number(e.target.value) })}>
+          <select disabled={continuous} title={continuous ? (range?.length === 1 ? 'حدّد نهاية المقدار لتكراره' : 'حدّد مقدارًا لتكراره') : undefined} value={continuous ? 1 : settings.rangeRepeat} onChange={(e) => setSettings({ rangeRepeat: Number(e.target.value) })}>
             <option value={1}>بدون تكرار</option>
             {REPEATS.map((n) => (
               <option key={n} value={n}>

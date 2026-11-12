@@ -31,6 +31,10 @@ const contrast = (a, b) => {
   const [x, y] = [lum(a), lum(b)];
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 };
+// مقادير الاشتقاق لخلفية ولون: مقادير نوع الخلفية، وما يعدّله اللون منها لنفسه («بلا لون»)
+const mixFor = (bg, accent) => ({ ...DATA.mix[bg.dark ? 'dark' : 'light'], ...accent.mix?.[bg.dark ? 'dark' : 'light'] });
+// اللون الثانوي الفعلي: لون نص المصحف في «بلا لون»، وإلا درجة اللون لنوع الخلفية
+const accentOf = (bg, accent) => (accent.ink ? bg.ink : bg.dark ? accent.dark : accent.light);
 const cssVar = (name) => document.documentElement.style.getPropertyValue(name);
 
 beforeEach(() => {
@@ -66,6 +70,11 @@ describe('أول فتح والانتقال من المفتاح القديم', ()
 });
 
 describe('التركيبات العشرون: الألوان المشتقة وتباينها', () => {
+  it('أربعة ألوان و«بلا لون» آخرها، ولا «موف»', () => {
+    expect(DATA.accents.map((a) => a.id)).toEqual(['blue', 'emerald', 'amber', 'maroon', 'none']);
+    expect(DATA.accents.at(-1).name).toBe('بلا لون');
+  });
+
   const combos = DATA.backgrounds.flatMap((b) => DATA.accents.map((a) => [b, a]));
   it.each(combos.map(([b, a]) => [b.id, a.id, b, a]))('%s + %s', (_b, _a, bg, accent) => {
     boot();
@@ -76,7 +85,7 @@ describe('التركيبات العشرون: الألوان المشتقة وت�
     expect(root.getAttribute('data-theme')).toBe(bg.dark ? 'dark' : 'light');
     expect(cssVar('--bg')).toBe(bg.bg);
     expect(cssVar('--ink')).toBe(bg.ink);
-    const accentHex = bg.dark ? accent.dark : accent.light;
+    const accentHex = accentOf(bg, accent);
     expect(cssVar('--accent')).toBe(accentHex);
     expect(document.querySelector('meta[name="theme-color"]').content).toBe(bg.bg);
 
@@ -84,13 +93,21 @@ describe('التركيبات العشرون: الألوان المشتقة وت�
     expect(contrast(rgb(bg.ink), rgb(bg.bg))).toBeGreaterThanOrEqual(4.5);
 
     // لون التطبيق للنص: ٤٫٥ فأكثر على كل سطح قد يقع عليه
-    const k = DATA.mix[bg.dark ? 'dark' : 'light'];
+    const k = mixFor(bg, accent);
     const B = rgb(bg.bg);
     const layer = bg.dark ? [255, 255, 255] : [0, 0, 0];
     const s2 = mix(B, layer, k['surface-2']);
     const surfaces = [B, mix(B, layer, k.surface), s2, mix(B, layer, k['surface-3']), mix(s2, rgb(accentHex), k.soft)];
     const text = rgb(cssVar('--accent-text'));
     for (const s of surfaces) expect(contrast(text, s)).toBeGreaterThanOrEqual(4.5);
+
+    // الآية الجارية في الاستماع: نصها مقروء فوق تظليلها (٤٫٨ فأكثر، مقرَّبًا كما يُرسم)، وتظليلها
+    // أوضح من أقوى درجتي المقررات، وهي أوضح من الأخرى
+    const A = rgb(accentHex);
+    const over = (p) => mix(B, A, p).map(Math.round);
+    expect(contrast(rgb(bg.ink), over(k.playing))).toBeGreaterThanOrEqual(4.8);
+    expect(contrast(over(k.playing), B)).toBeGreaterThan(contrast(over(k['week-b']), B) * 1.25);
+    expect(contrast(over(k['week-b']), B)).toBeGreaterThan(contrast(over(k['week-a']), B));
 
     // مقادير الاشتقاق مكتوبة متغيراتٍ لـtokens.css
     for (const [name, v] of Object.entries(k)) expect(cssVar(`--k-${name}`)).toBe(`${v}%`);
@@ -103,7 +120,38 @@ describe('التركيبات العشرون: الألوان المشتقة وت�
   });
 
   it('درجة اللون على الداكنة أفتح منها على الفاتحة', () => {
-    for (const a of DATA.accents) expect(lum(rgb(a.dark))).toBeGreaterThan(lum(rgb(a.light)));
+    for (const a of DATA.accents.filter((x) => !x.ink)) expect(lum(rgb(a.dark))).toBeGreaterThan(lum(rgb(a.light)));
+  });
+
+  it('«بلا لون»: كل ما يتبع اللون بدرجات لون نص المصحف — غامق على الفاتحتين وفاتح على الداكنتين', () => {
+    boot();
+    for (const bg of DATA.backgrounds) {
+      const state = window.hqAppearance.apply(bg.id, 'none');
+      expect(cssVar('--accent')).toBe(bg.ink);
+      expect(cssVar('--accent-text')).toBe(bg.ink.toLowerCase());
+      expect(state.colors.ornament).toBe(bg.ink);
+      const ink = lum(rgb(bg.ink));
+      const back = lum(rgb(bg.bg));
+      if (bg.dark) expect(ink).toBeGreaterThan(back);
+      else expect(ink).toBeLessThan(back);
+      // التظليل والزخرفة رمادية: مزيج الخلفية ولون النص وحدهما، بلا لون ثالث
+      const k = mixFor(bg, DATA.accents.find((a) => a.id === 'none'));
+      expect(cssVar('--k-playing')).toBe(`${k.playing}%`);
+      expect(state.colors.fill).toBe(
+        '#' + mix(rgb(bg.bg), rgb(bg.ink), k['decor-fill']).map((v) => ('0' + Math.round(v).toString(16)).slice(-2)).join('')
+      );
+    }
+  });
+});
+
+describe('انتقال من كان على «موف» (أُزيل)', () => {
+  it('ينتقل إلى «بلا لون» ويُحفظ', () => {
+    localStorage.setItem('hq.bg', 'gray');
+    localStorage.setItem('hq.accent', 'mauve');
+    boot();
+    expect(localStorage.getItem('hq.accent')).toBe('none');
+    expect(document.documentElement.getAttribute('data-accent')).toBe('none');
+    expect(cssVar('--accent')).toBe('#E8E6E1');
   });
 });
 

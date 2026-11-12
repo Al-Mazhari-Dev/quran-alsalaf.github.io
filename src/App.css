@@ -218,6 +218,53 @@
   color: var(--accent-ink);
 }
 
+/* خانة صفحات المحتوى: الزرّ بعرضها كاملًا، و✕ إلغاء مقدارها (إن وُجد) فوق طرفها الخارجي */
+.dock__study {
+  position: relative;
+  display: grid;
+  min-width: 0;
+}
+
+/* يُفسح الزرّ لـ✕ مكانه، فيبقى اسمه في وسط ما بقي ولا يقع تحته */
+.dock__study--range .dock__slot {
+  padding-inline-end: 40px;
+}
+
+/* مساحة اللمس ٤٤px بارتفاع الخانة كله، والدائرة الظاهرة أصغر منها */
+.dock__clear {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  border-start-end-radius: var(--r-md);
+  border-end-end-radius: var(--r-md);
+  color: inherit;
+  pointer-events: auto;
+}
+
+.dock__clear > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  color: #000;
+  transition: background 140ms ease;
+}
+
+:root[data-theme='dark'] .dock__clear > span {
+  color: #fff;
+}
+
+.dock__clear svg {
+  width: 13px;
+  height: 13px;
+}
+
 /* ريثما يُحمَّل الصوت */
 .dock__spin {
   width: 16px;
@@ -282,6 +329,10 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .dock__clear:hover > span {
+    background: var(--border-strong);
+  }
+
   .dock__slot:not(:disabled):hover,
   .topbar__icon:hover,
   .topbar__search:hover {
