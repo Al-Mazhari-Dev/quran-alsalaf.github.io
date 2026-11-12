@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { toArabicDigits } from '../data/quran.js';
+import { juzName, toArabicDigits } from '../data/quran.js';
 import { buildSearchIndex, search } from '../lib/search.js';
 import { addSearchHistory, readSearchHistory, removeSearchHistory } from '../lib/searchHistory.js';
 import './SearchOverlay.css';
@@ -7,7 +7,8 @@ import { useLayer } from '../lib/layers.js';
 
 /*
   البحث الرئيسي (الفصل ٨): خانة ثابتة أعلى منتصف صفحة المصحف تفتح هذه الصفحة الكاملة.
-  يبحث في النص الإملائي للآيات وأسماء السور (src/lib/search.js)، والضغط على نتيجة ينقل
+  يبحث في النص الإملائي للآيات وأسماء السور، وبالرقم وحده في الصفحات والسور والأجزاء
+  (src/lib/search.js)، والضغط على نتيجة ينقل
   إلى موضعها ويُغلق البحث. والصفحة الفارغة (بلا كتابة) بلا أي نصّ إرشادي — بل سجل آخر
   عمليات البحث الناجحة (بطلب صاحب المشروع)، فيُعاد أيٌّ منها بضغطة واحدة.
 */
@@ -46,7 +47,7 @@ export default function SearchOverlay({ quran, onGoto, onClose }) {
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث بنص الآية أو اسم السورة…"
+            placeholder="ابحث بالكلمات أو الأرقام…"
             inputMode="search"
             enterKeyHint="search"
           />
@@ -78,6 +79,17 @@ export default function SearchOverlay({ quran, onGoto, onClose }) {
                 </li>
               ))}
             </ul>
+          )
+        ) : result.numbers ? (
+          result.numbers.length > 0 && (
+            <section className="searchov__group">
+              {result.numbers.map((r) => (
+                <button key={r.kind} type="button" className="searchov__sura searchov__numHit" data-kind={r.kind} onClick={() => goto(r.page)}>
+                  <span className="searchov__num">{toArabicDigits(r.n)}</span>
+                  {r.kind === 'page' ? 'الصفحة' : r.kind === 'sura' ? `سورة ${quran.suras[r.n - 1].name}` : juzName(r.n)}
+                </button>
+              ))}
+            </section>
           )
         ) : result.suras.length + result.verses.length === 0 ? null : (
           <>
