@@ -34,6 +34,8 @@ describe('صيغ النسخ', () => {
   it('تسمية المقدار', () => {
     expect(verseLabel(quran, [v(2, 3)])).toBe('البقرة ٣');
     expect(verseLabel(quran, [v(2, 3), v(2, 5)])).toBe('البقرة ٣–٥');
+    // آية واحدة بدايةً ونهاية: بلا «–»
+    expect(verseLabel(quran, [v(2, 3), v(2, 3)])).toBe('البقرة ٣');
     expect(verseLabel(quran, [v(1, 7), v(2, 2)])).toBe('الفاتحة ٧ – البقرة ٢');
   });
 

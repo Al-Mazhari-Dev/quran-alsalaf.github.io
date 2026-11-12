@@ -115,7 +115,8 @@ export function verseLabel(quran, list) {
   const first = quran.verses[list[0]];
   const last = quran.verses[list.at(-1)];
   const name = quran.suras[first.s - 1].name;
-  if (list.length === 1) return `${name} ${ar(first.a)}`;
+  // آية واحدة (ولو حُددت بدايةً ونهاية معًا) تُكتب بلا «–»
+  if (list.length === 1 || list[0] === list.at(-1)) return `${name} ${ar(first.a)}`;
   if (first.s === last.s) return `${name} ${ar(first.a)}–${ar(last.a)}`;
   return `${name} ${ar(first.a)} – ${quran.suras[last.s - 1].name} ${ar(last.a)}`;
 }
