@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toArabicDigits } from '../data/quran.js';
+import { AYAT, countNoun } from '../lib/count.js';
 import './RangePicker.css';
 import { useLayer } from '../lib/layers.js';
 
@@ -60,7 +61,7 @@ export default function RangePicker({ quran, mode, start, near, onPick, onClose,
               <h3>
                 <button type="button" className="rpick__toggle" aria-expanded={expanded} onClick={() => toggle(s)}>
                   <span className="rpick__name">سورة {quran.suras[s - 1].name}</span>
-                  <span className="rpick__count">{toArabicDigits(quran.suras[s - 1].count)} آية</span>
+                  <span className="rpick__count">{toArabicDigits(quran.suras[s - 1].count)} {countNoun(quran.suras[s - 1].count, AYAT)}</span>
                   <svg className="rpick__chev" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>

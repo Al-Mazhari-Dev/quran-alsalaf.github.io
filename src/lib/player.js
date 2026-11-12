@@ -11,6 +11,7 @@
 //   • التشغيل في الخلفية وأزرار شاشة القفل عبر Media Session
 import { useSyncExternalStore } from 'react';
 import { ayahUrl, covers, reciterById, reciterTitle } from './reciters.js';
+import { toArabicDigits } from '../data/quran.js';
 
 const KEY = 'hq.listen';
 // ١ (بدون تكرار) يُعرض بعبارته لا رقمه؛ فالقائمة العددية تبدأ من ٢ (بطلب صاحب المشروع)
@@ -330,7 +331,7 @@ function updateMetadata() {
   const r = reciterById(state.settings.reciter);
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: `سورة ${quran.suras[verse.s - 1].name} — الآية ${verse.a}`,
+      title: `سورة ${quran.suras[verse.s - 1].name} — الآية ${toArabicDigits(verse.a)}`,
       artist: reciterTitle(r),
       album: 'قرآن السلف',
       artwork: [{ src: `${import.meta.env.BASE_URL}icons/icon-512.png`, sizes: '512x512', type: 'image/png' }],

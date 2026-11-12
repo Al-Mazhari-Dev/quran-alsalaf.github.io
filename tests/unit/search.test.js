@@ -119,3 +119,14 @@ describe('البحث بالسورة ورقم الآية', () => {
     expect(search(index, 'الحمد لله').total).toBeGreaterThan(0);
   });
 });
+
+describe('أسماء السور المصحَّحة الهمزات', () => {
+  it('إبراهيم والإنسان والانفطار والانشقاق، ويجدها البحث بالكتابتين', () => {
+    expect([14, 76, 82, 84].map((n) => QURAN.suras[n - 1].name)).toEqual(['إبراهيم', 'الإنسان', 'الانفطار', 'الانشقاق']);
+    expect(search(index, 'ابراهيم').suras).toEqual([14]);
+    expect(search(index, 'إبراهيم').suras).toEqual([14]);
+    expect(search(index, 'سورة الإنفطار').suras).toEqual([82]);
+    expect(search(index, 'الانشقاق').suras).toEqual([84]);
+    expect(search(index, 'الانسان').suras).toEqual([76]);
+  });
+});

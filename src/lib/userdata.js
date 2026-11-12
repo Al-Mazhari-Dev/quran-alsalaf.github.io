@@ -11,6 +11,8 @@ const EVENT = 'hq-userdata';
 export const MAX_BOOKMARKS = 10;
 // عشرة ألوان مميزة للعلامات (على نسق «آية»)
 export const BOOKMARK_COLORS = ['#c0392b', '#d4a017', '#3f8f3f', '#2e7bc4', '#8e44ad', '#e67e22', '#16a085', '#d35486', '#6d4c41', '#607d8b'];
+// اسم العلامة الافتراضي بلونها: «الفاصل الأحمر»
+export const bookmarkName = (color) => `الفاصل ${BOOKMARK_COLOR_NAMES[color]}`;
 export const BOOKMARK_COLOR_NAMES = ['الأحمر', 'الأصفر', 'الأخضر', 'الأزرق', 'البنفسجي', 'البرتقالي', 'الفيروزي', 'الوردي', 'البني', 'الرمادي'];
 
 function read(key, fallback) {
@@ -57,7 +59,7 @@ export function toggleBookmark(v) {
   if (list.length >= MAX_BOOKMARKS) return 'full';
   const used = new Set(list.map((b) => b.color));
   const color = BOOKMARK_COLORS.findIndex((_, i) => !used.has(i));
-  list.push({ id: Date.now(), v, color, name: `الفاصل ${BOOKMARK_COLOR_NAMES[color]}` });
+  list.push({ id: Date.now(), v, color, name: bookmarkName(color) });
   write(BOOKMARKS_KEY, list);
   return 'added';
 }

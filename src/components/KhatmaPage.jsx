@@ -66,7 +66,7 @@ export default function KhatmaPage({ quran, wird, next, onClose, onComplete, onL
             أتممت الورد ✓
           </button>
         ) : (
-          <span className="kpage__hint">قلب إلى الصفحة التالية</span>
+          <span className="kpage__hint">انتقل إلى الصفحة التالية</span>
         )}
       </footer>
     </div>

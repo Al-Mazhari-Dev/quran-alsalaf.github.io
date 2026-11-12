@@ -19,6 +19,7 @@ import {
   wirdState,
 } from '../lib/khatma.js';
 import { FIRST_PAGE, LAST_PAGE } from '../lib/position.js';
+import { countNoun, countText, KHATMAS, PAGES } from '../lib/count.js';
 import './Khatma.css';
 
 /*
@@ -47,7 +48,7 @@ export default function KhatmaTab({ quran, onRead, onToast }) {
         onSubmit={(mode, value) => {
           if (wird) {
             editWird(mode, value, today);
-            onToast('عدلت الخطة');
+            onToast('تم تعديل الخطة');
           } else startWird(mode, value, today);
           setEditing(false);
         }}
@@ -88,7 +89,7 @@ function PlanForm({ editing, initial, from, start, doneCount, onSubmit, onCancel
         <h3 className="khatma__title">{editing ? 'تعديل الخطة' : 'ختمة جديدة'}</h3>
         {/* في الإنشاء بلا جملة شرح (بطلب صاحب المشروع)؛ وفي التعديل يبين ما يعاد تقسيمه */}
         {editing && (
-          <p className="khatma__hint">{`يعاد تقسيم ما بقي (${pagesText(remaining, n)}، من الصفحة ${n(from)}) دون أن يضيع ما قرأته.`}</p>
+          <p className="khatma__hint">{`يعاد تقسيم ما بقي (${pagesText(remaining, n, true)}، من الصفحة ${n(from)}) دون أن يضيع ما قرأته.`}</p>
         )}
 
         <div className="khatma__segment" role="radiogroup" aria-label="طريقة التحديد">
@@ -112,7 +113,7 @@ function PlanForm({ editing, initial, from, start, doneCount, onSubmit, onCancel
                 setValue(p);
               }}
             >
-              {mode === 'days' ? daysText(p, n) : pagesText(p, n)}
+              {mode === 'days' ? daysText(p, n, true) : pagesText(p, n, true)}
             </button>
           ))}
           <button type="button" role="radio" aria-checked={custom} onClick={() => setCustom(true)}>
@@ -137,7 +138,7 @@ function PlanForm({ editing, initial, from, start, doneCount, onSubmit, onCancel
         {plan ? (
           <div className="khatma__summary" aria-live="polite">
             <p className="khatma__summaryMain">
-              {daysText(plan.days, n)}، {mode === 'days' ? (plan.min === plan.max ? pagesText(plan.max, n) : `${n(plan.min)}–${n(plan.max)} صفحة`) : pagesText(chosen, n)} يوميا
+              {daysText(plan.days, n, true)}، {mode === 'days' ? (plan.min === plan.max ? pagesText(plan.max, n, true) : `${n(plan.min)}–${n(plan.max)} ${countNoun(plan.max, PAGES)}`) : pagesText(chosen, n, true)} يوميا
             </p>
             <p className="khatma__date">
               <span>تختم يوم</span>
@@ -172,7 +173,7 @@ function Active({ quran, wird, today, doneCount, onRead, onEdit, onToast }) {
   const [a, b] = s.current;
   const dates = formatDates(s.end);
   const status = s.behind
-    ? { text: `متأخر ${daysText(s.behind, n)} عن الخطة`, kind: 'behind' }
+    ? { text: `متأخر عن الخطة ${daysText(s.behind, n)}`, kind: 'behind' }
     : s.ahead
       ? { text: `متقدم على الخطة ${daysText(s.ahead, n)}`, kind: 'ahead' }
       : s.doneToday
@@ -180,7 +181,7 @@ function Active({ quran, wird, today, doneCount, onRead, onEdit, onToast }) {
         : { text: 'على الخطة', kind: 'on' };
 
   const complete = () => {
-    if (completeWird(today) === 'next') onToast('أحسنت، سجل الورد');
+    if (completeWird(today) === 'next') onToast('أحسنت، تم تسجيل الورد');
   };
 
   return (
@@ -196,7 +197,7 @@ function Active({ quran, wird, today, doneCount, onRead, onEdit, onToast }) {
           <span style={{ width: `${s.percent}%` }} />
         </div>
         <p className="khatma__progress">
-          <strong>{n(s.percent)}٪</strong>، قرأت {n(s.read)} من {n(LAST_PAGE)} صفحة
+          <strong>{n(s.percent)}٪</strong>، قرأت {n(s.read)} من {n(LAST_PAGE)} {countNoun(LAST_PAGE, PAGES)}
         </p>
         <p className={`khatma__status khatma__status--${status.kind}`}>{status.text}</p>
 
@@ -204,7 +205,7 @@ function Active({ quran, wird, today, doneCount, onRead, onEdit, onToast }) {
           <span className="khatma__label">{s.doneToday ? 'الورد التالي' : 'ورد اليوم'}</span>
           <strong className="khatma__pages">{a === b ? `الصفحة ${n(a)}` : `من الصفحة ${n(a)} إلى ${n(b)}`}</strong>
           <span className="khatma__suras">
-            {wirdSuras(quran, a, b)}، {pagesText(b - a + 1, n)}
+            {wirdSuras(quran, a, b)}، {pagesText(b - a + 1, n, true)}
           </span>
           <div className="khatma__actions">
             <button type="button" className="khatma__btn khatma__btn--primary" onClick={onRead}>
@@ -274,13 +275,8 @@ function Finished({ date, doneCount }) {
   );
 }
 
-// «ختمة واحدة» · «ختمتين» · «٣ ختمات» · «١١ ختمة»
-function khatmasText(c) {
-  if (c === 1) return 'ختمة واحدة';
-  if (c === 2) return 'ختمتين';
-  if (c >= 3 && c <= 10) return `${n(c)} ختمات`;
-  return `${n(c)} ختمة`;
-}
+// «ختمة واحدة» · «ختمتين» · «٣ ختمات» · «١١ ختمة» (منصوبة: «أتممت ختمتين»)
+const khatmasText = (c) => countText(c, KHATMAS, n);
 
 // سور الورد: من سورة أول آية فيه إلى سورة آخر آية
 export function wirdSuras(quran, a, b) {

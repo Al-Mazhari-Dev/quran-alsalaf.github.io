@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState } from 'react';
 import { juzName, toArabicDigits } from '../data/quran.js';
+import { AYAT, countNoun } from '../lib/count.js';
 import { buildSearchIndex, search } from '../lib/search.js';
 import { addSearchHistory, readSearchHistory, removeSearchHistory } from '../lib/searchHistory.js';
 import './SearchOverlay.css';
@@ -137,10 +138,9 @@ export default function SearchOverlay({ quran, onGoto, onClose }) {
   );
 }
 
-// «سورة البقرة ٢٨٦ آية» — وما آخره من ٣ إلى ١٠ (كالعصر ٣) بـ«آيات»
+// «سورة البقرة ٢٨٦ آية» · «سورة العصر ٣ آيات» (src/lib/count.js)
 function suraCount(sura) {
-  const tail = sura.count % 100;
-  return `سورة ${sura.name} ${toArabicDigits(sura.count)} ${tail >= 3 && tail <= 10 ? 'آيات' : 'آية'}`;
+  return `سورة ${sura.name} ${toArabicDigits(sura.count)} ${countNoun(sura.count, AYAT)}`;
 }
 
 // نتيجة آية: اسم السورة ورقم الآية، ثم نصّها

@@ -155,7 +155,7 @@ test('صفحة الورد: تفتح على أوله ولا تقلب خارجه،
 
   await kpage(page).getByRole('button', { name: /أتممت الورد/ }).click();
   await expect(kpage(page)).toHaveCount(0);
-  await expect(page.locator('.toast')).toHaveText('أحسنت، سجل الورد');
+  await expect(page.locator('.toast')).toHaveText('أحسنت، تم تسجيل الورد');
   // يرجع إلى تبويب الختمة: الورد التالي
   await expect(side(page)).toHaveClass(/sidemenu--open/);
   const card = side(page).locator('.khatma__card');
@@ -213,13 +213,13 @@ test('إتمام الورد من البطاقة، والتأخر والتقدم 
   await open(page, { 'hq.sideTab': 'khatma', 'hq.khatmas': wird({ planStart: '2026-11-09', created: '2026-11-09' }) });
   await clickTopbar(page, 'القائمة');
   const card = side(page).locator('.khatma__card');
-  await expect(card).toContainText('متأخر ٣ أيام عن الخطة');
+  await expect(card).toContainText('متأخر عن الخطة ٣ أيام');
   await expect(card).toContainText('من الصفحة ١ إلى ٢٠');
   await expect(card).toContainText('الجمعة ١١ ديسمبر ٢٠٢٦م');
   for (let i = 0; i < 3; i++) await card.getByRole('button', { name: 'أتممت الورد' }).click();
   await expect(card).toContainText('أتممت ورد اليوم');
   await expect(card).toContainText('من الصفحة ٦١ إلى ٨٠');
-  await expect(card).toContainText('٩٪، قرأت ٦٠ من ٦٠٤ صفحة');
+  await expect(card).toContainText('٩٪، قرأت ٦٠ من ٦٠٤ صفحات');
   await card.getByRole('button', { name: 'أتممت الورد' }).click();
   await card.getByRole('button', { name: 'أتممت الورد' }).click();
   await expect(card).toContainText('متقدم على الخطة يوم واحد');
@@ -236,7 +236,7 @@ test('تعديل الخطة يعيد التقسيم مما بقي، وحذف ا�
   await card.getByRole('radio', { name: 'بالصفحات يوميا' }).click();
   await card.getByRole('radio', { name: '٢٠ صفحة' }).click();
   await card.getByRole('button', { name: 'حفظ الخطة' }).click();
-  await expect(page.locator('.toast')).toHaveText('عدلت الخطة');
+  await expect(page.locator('.toast')).toHaveText('تم تعديل الخطة');
   await expect(card).toContainText('من الصفحة ٤١ إلى ٦٠');
   await expect(card).toContainText('الورد ٣ من ٣١');
   await expect(card).toContainText('قرأت ٤٠ من ٦٠٤');

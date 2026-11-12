@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toArabicDigits } from '../data/quran.js';
 import { FOREVER } from '../lib/player.js';
 import { copyVerse, loadTafsir, memoIndex, muyassarPlain, verseLabel } from '../lib/study.js';
-import { copyText, readNotes, setNote, toggleBookmark, BOOKMARK_COLOR_NAMES, MAX_BOOKMARKS, readBookmarks } from '../lib/userdata.js';
+import { copyText, readNotes, setNote, toggleBookmark, bookmarkName, MAX_BOOKMARKS, readBookmarks } from '../lib/userdata.js';
 import { CopyIcon, NO_ACTIONS, NO_MEANINGS, QuotedText, UNAVAILABLE, VerseCard } from './StudySheet.jsx';
 import './VerseMenu.css';
 import { useLayer } from '../lib/layers.js';
@@ -48,7 +48,7 @@ export default function VerseMenu({ quran, pressed, onClose, onToast, onPlay, on
       else if (result === 'removed') onToast('أُزيلت العلامة عن الآية');
       else {
         const b = readBookmarks().find((x) => x.v === v);
-        onToast(`أُضيفت علامة: ${b?.name ?? BOOKMARK_COLOR_NAMES[0]}`);
+        onToast(`أُضيفت علامة: ${b?.name ?? bookmarkName(0)}`);
       }
       onClose();
       return;

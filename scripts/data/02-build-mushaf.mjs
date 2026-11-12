@@ -265,9 +265,12 @@ for (const v of verses) {
 }
 
 // ---------- الإخراج ----------
+// تصحيح همزات أسماء سور في بيانات المصدر (٢٠٢٦-١١-١٢): همزة قطع في «إبراهيم» و«الإنسان»،
+// وهمزة وصل في «الانفطار» و«الانشقاق»
+const NAME_FIXES = { ابراهيم: 'إبراهيم', الانسان: 'الإنسان', الإنفطار: 'الانفطار', الإنشقاق: 'الانشقاق' };
 const suras = chapters.map((c) => ({
   n: c.id,
-  name: c.name_arabic,
+  name: NAME_FIXES[c.name_arabic] ?? c.name_arabic,
   place: c.revelation_place === 'makkah' ? 'مكية' : 'مدنية',
   count: c.verses_count,
   page: c.pages[0],
