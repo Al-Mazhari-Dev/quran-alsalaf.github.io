@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { juzName, toArabicDigits } from '../data/quran.js';
 import { buildSearchIndex, search } from '../lib/search.js';
 import { addSearchHistory, readSearchHistory, removeSearchHistory } from '../lib/searchHistory.js';
@@ -7,9 +7,9 @@ import { useLayer } from '../lib/layers.js';
 
 /*
   البحث الرئيسي (الفصل ٨): خانة ثابتة أعلى منتصف صفحة المصحف تفتح هذه الصفحة الكاملة.
-  يبحث في النص الإملائي للآيات وأسماء السور، وبالرقم وحده في الصفحات والسور والأجزاء
-  (src/lib/search.js)، والضغط على نتيجة ينقل
-  إلى موضعها ويُغلق البحث. والصفحة الفارغة (بلا كتابة) بلا أي نصّ إرشادي — بل سجل آخر
+  يبحث في النص الإملائي للآيات وأسماء السور، وبالرقم وحده في الصفحات والسور والأجزاء،
+  وبالسورة ورقم الآية «البقرة ٢٥٥» (src/lib/search.js)، والضغط على نتيجة ينقل
+  إلى موضعها ويُغلق البحث؛ ونتيجة الآية تُميَّز آيتها في المصحف تمييزًا مؤقتًا. والصفحة الفارغة (بلا كتابة) بلا أي نصّ إرشادي — بل سجل آخر
   عمليات البحث الناجحة (بطلب صاحب المشروع)، فيُعاد أيٌّ منها بضغطة واحدة.
 */
 export default function SearchOverlay({ quran, onGoto, onClose }) {
@@ -19,11 +19,14 @@ export default function SearchOverlay({ quran, onGoto, onClose }) {
   const index = useMemo(() => buildSearchIndex(quran), [quran]);
   const result = useMemo(() => search(index, q), [index, q]);
 
-  const goto = (page) => {
+  // verse: موضع الآية في قائمة الآيات، لتمييزها في صفحتها
+  const goto = (page, verse) => {
     addSearchHistory(q);
-    onGoto(page);
+    onGoto(page, verse);
     onClose();
   };
+  const outOfRange = new Map((result.refs ?? []).filter((r) => r.i === null).map((r) => [r.s, r]));
+  const refHits = (result.refs ?? []).filter((r) => r.i !== null);
 
   const removeHistory = (text) => {
     removeSearchHistory(text);
@@ -93,14 +96,26 @@ export default function SearchOverlay({ quran, onGoto, onClose }) {
           )
         ) : result.suras.length + result.verses.length === 0 ? null : (
           <>
+            {refHits.length > 0 && (
+              <section className="searchov__group">
+                <h3>{refHits.length > 1 ? 'الآيات' : 'الآية'}</h3>
+                {refHits.map((r) => (
+                  <VerseHit key={r.i} quran={quran} i={r.i} className="searchov__refHit" onClick={() => goto(quran.verses[r.i].p, r.i)} />
+                ))}
+              </section>
+            )}
             {result.suras.length > 0 && (
               <section className="searchov__group">
                 <h3>السور</h3>
                 {result.suras.map((n) => (
-                  <button key={n} type="button" className="searchov__sura" onClick={() => goto(quran.suras[n - 1].page)}>
-                    <span className="searchov__num">{toArabicDigits(n)}</span>
-                    سورة {quran.suras[n - 1].name}
-                  </button>
+                  <Fragment key={n}>
+                    <button type="button" className="searchov__sura" onClick={() => goto(quran.suras[n - 1].page)}>
+                      <span className="searchov__num">{toArabicDigits(n)}</span>
+                      سورة {quran.suras[n - 1].name}
+                    </button>
+                    {/* رقم آية أكبر من آيات السورة: تُذكر عدّتها تحتها */}
+                    {outOfRange.has(n) && <p className="searchov__suraNote">{suraCount(quran.suras[n - 1])}</p>}
+                  </Fragment>
                 ))}
               </section>
             )}
@@ -110,23 +125,34 @@ export default function SearchOverlay({ quran, onGoto, onClose }) {
                   الآيات
                   {result.total > result.verses.length && <span> (أول {toArabicDigits(result.verses.length)} من {toArabicDigits(result.total)})</span>}
                 </h3>
-                {result.verses.map((i) => {
-                  const v = quran.verses[i];
-                  return (
-                    <button key={i} type="button" className="searchov__verse" onClick={() => goto(v.p)}>
-                      <span className="searchov__verseRef">
-                        {quran.suras[v.s - 1].name} {toArabicDigits(v.a)}
-                      </span>
-                      <span className="searchov__verseText">{v.e}</span>
-                    </button>
-                  );
-                })}
+                {result.verses.map((i) => (
+                  <VerseHit key={i} quran={quran} i={i} onClick={() => goto(quran.verses[i].p, i)} />
+                ))}
               </section>
             )}
           </>
         )}
       </div>
     </div>
+  );
+}
+
+// «سورة البقرة ٢٨٦ آية» — وما آخره من ٣ إلى ١٠ (كالعصر ٣) بـ«آيات»
+function suraCount(sura) {
+  const tail = sura.count % 100;
+  return `سورة ${sura.name} ${toArabicDigits(sura.count)} ${tail >= 3 && tail <= 10 ? 'آيات' : 'آية'}`;
+}
+
+// نتيجة آية: اسم السورة ورقم الآية، ثم نصّها
+function VerseHit({ quran, i, className, onClick }) {
+  const v = quran.verses[i];
+  return (
+    <button type="button" className={`searchov__verse${className ? ` ${className}` : ''}`} onClick={onClick}>
+      <span className="searchov__verseRef">
+        {quran.suras[v.s - 1].name} {toArabicDigits(v.a)}
+      </span>
+      <span className="searchov__verseText">{v.e}</span>
+    </button>
   );
 }
 

@@ -85,6 +85,89 @@ test('البحث بالأرقام: الصفحة ثم السورة ثم الجز�
   await expect(hits).toHaveCount(0);
 });
 
+// البحث بالسورة ورقم الآية (٢٠٢٦-١١-١٢): الآية أولًا ثم سورتها، والضغط ينقل إلى صفحتها ويميّزها مؤقتًا
+const at = (s, a) => QURAN.verses.findIndex((v) => v.s === s && v.a === a);
+const flashed = (page) => page.locator('.sheet--current .w--flash');
+
+test('البحث بالسورة ورقم الآية: «البقرة ٢٥٥» أولًا، والانتقال إلى صفحتها، وتمييزها مؤقتًا ثم زواله', async ({ page }) => {
+  await openApp(page, { 'hq.page': '1' });
+  await clickTopbar(page, 'بحث في المصحف');
+  const box = page.getByPlaceholder('ابحث بالكلمات أو الأرقام…');
+  const results = page.locator('.searchov__verse, .searchov__sura');
+
+  // بأرقام عربية وإنجليزية، و«سورة»، وبلا «ال»، و«٢:٢٥٥»: آية الكرسي نتيجة أولى، ثم سورة البقرة
+  for (const q of ['البقرة 255', 'سورة البقرة 255', 'بقرة 255', '٢:٢٥٥', 'البقرة ٢٥٥']) {
+    await box.fill(q);
+    await expect(results.first(), q).toHaveClass(/searchov__refHit/);
+    await expect(results.first(), q).toContainText('البقرة ٢٥٥');
+    await expect(results.first(), q).toContainText('الله لا إله إلا هو الحي القيوم');
+    await expect(results.nth(1), q).toContainText('سورة البقرة');
+    await expect(results, q).toHaveCount(2);
+  }
+
+  await results.first().click();
+  await expect(page.locator('.searchov')).toHaveCount(0);
+  await expect.poll(() => shownPages(page)).toContain(42);
+  // الآية وحدها مظلَّلة، ثم يزول تظليلها وحده بعد ثوانٍ
+  const kursi = at(2, 255);
+  await expect(flashed(page).first()).toBeVisible();
+  expect(await flashed(page).evaluateAll((els) => [...new Set(els.map((el) => Number(el.dataset.v)))])).toEqual([kursi]);
+  await page.waitForTimeout(1500);
+  await expect(flashed(page).first()).toBeVisible();
+  await expect(flashed(page)).toHaveCount(0, { timeout: 6000 });
+  await expect(page.locator(`.sheet--current .w[data-v="${kursi}"]`).first()).toBeVisible();
+
+  // يُحفظ في السجل كما كُتب
+  await clickTopbar(page, 'بحث في المصحف');
+  await expect(page.locator('.searchov__histItem', { hasText: 'البقرة ٢٥٥' })).toBeVisible();
+});
+
+test('البحث بالسورة ورقم أكبر من آياتها: السورة وحدها ومعها عدد آياتها', async ({ page }) => {
+  await openApp(page, { 'hq.page': '1' });
+  await clickTopbar(page, 'بحث في المصحف');
+  const box = page.getByPlaceholder('ابحث بالكلمات أو الأرقام…');
+  await box.fill('البقرة 300');
+  await expect(page.locator('.searchov__sura')).toHaveText(['٢سورة البقرة']);
+  await expect(page.locator('.searchov__suraNote')).toHaveText('سورة البقرة ٢٨٦ آية');
+  await expect(page.locator('.searchov__verse')).toHaveCount(0);
+  await box.fill('العصر ٤');
+  await expect(page.locator('.searchov__suraNote')).toHaveText('سورة العصر ٣ آيات');
+  // والرقم الصحيح لا ملاحظة معه
+  await box.fill('العصر ٣');
+  await expect(page.locator('.searchov__refHit')).toContainText('العصر ٣');
+  await expect(page.locator('.searchov__suraNote')).toHaveCount(0);
+  // ونتيجة السورة تنقل إلى أولها بلا تمييز
+  await box.fill('البقرة 300');
+  await page.locator('.searchov__sura').click();
+  await expect.poll(() => shownPages(page)).toContain(2);
+  await expect(page.locator('.w--flash')).toHaveCount(0);
+});
+
+test('نتيجة آية في البحث بالكلمات تُميَّز كذلك في صفحتها', async ({ page }) => {
+  await openApp(page, { 'hq.page': '1' });
+  await clickTopbar(page, 'بحث في المصحف');
+  await page.getByPlaceholder('ابحث بالكلمات أو الأرقام…').fill('اصحاب الكهف والرقيم');
+  await page.locator('.searchov__verse').first().click();
+  await expect.poll(() => shownPages(page)).toContain(294);
+  await expect(flashed(page).first()).toBeVisible();
+  expect(await flashed(page).evaluateAll((els) => [...new Set(els.map((el) => Number(el.dataset.v)))])).toEqual([at(18, 9)]);
+});
+
+test.describe('الجوال الأفقي', () => {
+  test.use({ viewport: { width: 844, height: 390 }, hasTouch: true });
+
+  test('الآية المميَّزة أسفل الصفحة تُحضر إلى منظر العين', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', 'مقاس واحد يكفي');
+    await openApp(page, { 'hq.page': '1' });
+    await clickTopbar(page, 'بحث في المصحف');
+    // البقرة ٢٥٦ آخر آية في الصفحة ٤٢
+    await page.getByPlaceholder('ابحث بالكلمات أو الأرقام…').fill('البقرة 256');
+    await page.locator('.searchov__refHit').click();
+    await expect.poll(() => shownPages(page)).toContain(42);
+    await expect(flashed(page).first()).toBeInViewport();
+  });
+});
+
 test('العلامات المرجعية: إضافة، وإعادة تسمية، ونقل، والانتقال، وحذف', async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
   await longPress(page, 2);
