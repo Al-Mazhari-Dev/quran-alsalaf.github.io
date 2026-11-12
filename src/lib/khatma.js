@@ -8,6 +8,7 @@
 // • كل شيء على الجهاز وحده (localStorage)، كبقية بيانات المستخدم.
 import { useEffect, useState } from 'react';
 import { FIRST_PAGE, LAST_PAGE } from './position.js';
+import { countText, DAYS, PAGES } from './count.js';
 
 const KEY = 'hq.khatmas';
 const DONE_KEY = 'hq.khatmasDone'; // عدد الختمات المتمة: { wird: n }
@@ -185,21 +186,12 @@ export function wirdState(k, today = dayKey()) {
   };
 }
 
-// «يوم واحد» · «يومين» · «٣ أيام» · «١١ يوما» (بأرقام عربية)
-export function daysText(n, digits = (x) => x) {
-  if (n === 1) return 'يوم واحد';
-  if (n === 2) return 'يومين';
-  if (n >= 3 && n <= 10) return `${digits(n)} أيام`;
-  return `${digits(n)} يوما`;
-}
+// «يوم واحد» · «يومان/يومين» · «٣ أيام» · «١١ يوما» · «١٠٠ يوم» (بأرقام عربية) — src/lib/count.js
+// nominative: المثنى مرفوعًا حين يأتي العدد مستقلًا («يومان، صفحتان يوميا»)
+export const daysText = (n, digits, nominative) => countText(n, DAYS, digits, nominative);
 
-// «صفحة واحدة» · «صفحتين» · «٥ صفحات» · «٢٠ صفحة»
-export function pagesText(n, digits = (x) => x) {
-  if (n === 1) return 'صفحة واحدة';
-  if (n === 2) return 'صفحتين';
-  if (n >= 3 && n <= 10) return `${digits(n)} صفحات`;
-  return `${digits(n)} صفحة`;
-}
+// «صفحة واحدة» · «صفحتان/صفحتين» · «٥ صفحات» · «٢٠ صفحة» · «١٠٣ صفحات»
+export const pagesText = (n, digits, nominative) => countText(n, PAGES, digits, nominative);
 
 // تتحدث عند أي تغيير في الختمة
 const snapshot = () => ({ wird: readWird(), doneCount: readDoneCount() });

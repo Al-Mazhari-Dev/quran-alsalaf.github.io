@@ -304,7 +304,7 @@ const FlowPage = memo(function FlowPage({ quran, page, top, layout, marks }) {
           className="mushaf-page mushaf-page--pending"
           style={{ width: `${layout.width}px`, height: `${layout.pageHeight}px` }}
         >
-          {font === 'failed' && 'تُنزَّل هذه الصفحة عند أول فتح لها، وتحتاج لذلك اتصالًا بالإنترنت.'}
+          {font === 'failed' && 'تُنزَّل هذه الصفحة عند أول فتح لها، وتحتاج لذلك اتصالًا بالإنترنت. وتعمل بعدها بلا اتصال.'}
         </div>
       )}
     </section>

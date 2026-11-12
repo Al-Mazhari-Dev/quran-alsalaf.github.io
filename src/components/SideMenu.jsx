@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { toArabicDigits } from '../data/quran.js';
+import { AYAT, countNoun } from '../lib/count.js';
 import { verseLabel } from '../lib/study.js';
 import { BOOKMARK_COLORS, moveBookmark, removeBookmark, renameBookmark, setNote, useUserData } from '../lib/userdata.js';
 import RangePicker from './RangePicker.jsx';
@@ -76,7 +77,7 @@ export default function SideMenu({ quran, open, onGoto, onClose, onReadWird, onT
                   <button type="button" onClick={() => goto(quran.verses.findIndex((v) => v.s === s.n))}>
                     <span className="sidemenu__suraNum">{toArabicDigits(s.n)}</span>
                     <span className="sidemenu__suraName">سورة {s.name}</span>
-                    <span className="sidemenu__suraMeta">{toArabicDigits(s.count)} آية</span>
+                    <span className="sidemenu__suraMeta">{toArabicDigits(s.count)} {countNoun(s.count, AYAT)}</span>
                   </button>
                 </li>
               ))}

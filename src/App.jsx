@@ -331,7 +331,7 @@ export default function App() {
   }, [afterKhatma]);
   const finishWird = () => {
     const result = completeWird();
-    if (result === 'next') showToast('أحسنت، سجل الورد');
+    if (result === 'next') showToast('أحسنت، تم تسجيل الورد');
     else if (result === 'finished') showToast('أتممت الختمة، تقبل الله منك');
     closeKhatma();
   };

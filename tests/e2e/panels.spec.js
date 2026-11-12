@@ -196,3 +196,18 @@ test('وضع القراءة يتقدم تلقائيًّا ويتوقف بالإ�
   await page.waitForTimeout(1200);
   expect(Math.abs((await top()) - t1)).toBeLessThan(1.5);
 });
+
+test('قائمة السور: عدد الآيات بصيغته (٧ آيات · ٢٨٦ آية)، وأسماء السور بهمزاتها الصحيحة', async ({ page }) => {
+  await clickTopbar(page, 'القائمة');
+  await expect(side(page)).toHaveClass(/sidemenu--open/);
+  await side(page).getByRole('tab', { name: 'السور' }).click();
+  const meta = side(page).locator('.sidemenu__suraMeta');
+  await expect(meta.nth(0)).toHaveText('٧ آيات');
+  await expect(meta.nth(1)).toHaveText('٢٨٦ آية');
+  await expect(meta.nth(102)).toHaveText('٣ آيات');
+  const names = side(page).locator('.sidemenu__suraName');
+  await expect(names.nth(13)).toHaveText('سورة إبراهيم');
+  await expect(names.nth(75)).toHaveText('سورة الإنسان');
+  await expect(names.nth(81)).toHaveText('سورة الانفطار');
+  await expect(names.nth(83)).toHaveText('سورة الانشقاق');
+});
