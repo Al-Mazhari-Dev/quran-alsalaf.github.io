@@ -4,7 +4,7 @@ import MushafPage from './MushafPage.jsx';
 import { pageInfo, toArabicDigits } from '../data/quran.js';
 import { SURA_NAMES_VOWELED } from '../data/suraNamesVoweled.js';
 import { SPREAD_GUTTER, isScrollMode, isSpreadMode, pageLayout, spreadArea, spreadStart } from '../lib/layout.js';
-import { hasOpenLayer } from '../lib/layers.js';
+import { hasOpenLayer, isTopLayer } from '../lib/layers.js';
 import { prefetchPageFonts, usePageFont } from '../lib/qcfFonts.js';
 import { FIRST_PAGE, LAST_PAGE, readLastPage, saveLastPage } from '../lib/position.js';
 import './Reader.css';
@@ -56,8 +56,14 @@ const LONG_PRESS_MS = 450;
 // marks: إشارات بيانات المستخدم على الآيات (MushafPage)
 // onSpread(bool): يُبلَّغ به هل تُعرض الصفحتان معًا
 // arrows: إظهار سهمي التقليب على جانبي الزوج (عند تحريك الفأرة) — في عرض الصفحتين وحده
-export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLongPress, goto, marks, arrows }) {
-  const [page, setPage] = useState(readLastPage);
+// ولمصحف محدود داخل صفحة أخرى (كورد الختمة، ٢٠٢٦-١١-١٢):
+//   bounds [أول صفحة، آخر صفحة]: لا يُقلَّب خارجها، وفي عرض الصفحتين تبهت صفحة الزوج الواقعة خارجها
+//   startPage: الصفحة التي يُفتح عليها · persist=false: لا يُقرأ آخر موضع ولا يُحفظ
+//   layer: مدخل طبقته (useLayer)، فيستقبل مفاتيح التقليب ما دامت طبقته في الأعلى
+export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLongPress, goto, marks, arrows, bounds, startPage, persist = true, layer }) {
+  const MIN = bounds?.[0] ?? FIRST_PAGE;
+  const MAX = bounds?.[1] ?? LAST_PAGE;
+  const [page, setPage] = useState(() => startPage ?? readLastPage());
   const [box, setBox] = useState(null);
   // الجوال الأفقي (٢٠٢٦-١٠-١٧): تملأ الصفحةُ العرضَ وتُمرَّر رأسيًّا داخل نفسها (src/lib/layout.js)
   const scroll = isScrollMode(box);
@@ -99,9 +105,9 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLon
   }, []);
 
   useEffect(() => {
-    saveLastPage(page);
+    if (persist) saveLastPage(page);
     onPage?.(page);
-  }, [page, onPage]);
+  }, [page, onPage, persist]);
   // الصفحتان المجاورتان تُرسمان على الشريط فيُنزَّل خطّاهما معهما، ويُنزَّل ما بعدهما مسبقًا
   // وفي الزوج: الزوجان المجاوران يُرسمان، ويُنزَّل خطّا ما بعدهما مسبقًا
   useEffect(
@@ -125,11 +131,15 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLon
   // فتحلّ الصفحة الجديدة محلّ المجاورة بلا وميض
   useLayoutEffect(() => moveTrack(0, false), [base, box, spread, moveTrack]);
 
-  const canTurn = (dir) => (dir > 0 ? base + step <= LAST_PAGE : base - step >= FIRST_PAGE);
+  // التالي ممكن إن كانت أول صفحاته داخل الحدود، والسابق إن كانت آخر صفحاته (base - 1) داخلها
+  const canTurn = (dir) => (dir > 0 ? base + step <= MAX : base - 1 >= MIN);
   // في الزوج يُنتقل من صفحته اليمنى إلى يمنى الزوج المجاور
+  const limits = useRef([MIN, MAX]);
+  limits.current = [MIN, MAX];
   const turned = (p, d) => {
     const s = stepRef.current;
-    return Math.min(LAST_PAGE, Math.max(FIRST_PAGE, (s === 2 ? spreadStart(p) : p) + d * s));
+    const [lo, hi] = limits.current;
+    return Math.min(hi, Math.max(lo, (s === 2 ? spreadStart(p) : p) + d * s));
   };
 
   // dir: ‎+1 التالية (الشريط يتحرك يمينًا)، ‎-1 السابقة، ‎0 العودة إلى الموضع
@@ -256,10 +266,12 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLon
   // وPageUp للسابقة. ولا تعمل والمصحف مغطّى بقائمة أو صفحة، ولا أثناء الكتابة في خانة.
   // ومع الضغط المستمر تُتمّ القلبة الجارية فورًا فيُقلَّب متتابعًا.
   const api = useRef(null);
-  api.current = { settle, canTurn, moveTrack, completeNow, w: box?.w ?? 0 };
+  // المصحف مغطّى: بطبقة فوقه، أو (لمصحف داخل طبقة) بطبقة فوق طبقته
+  const covered = () => (layer ? !isTopLayer(layer) : hasOpenLayer());
+  api.current = { settle, canTurn, moveTrack, completeNow, covered, w: box?.w ?? 0 };
   useEffect(() => {
     const onKey = (e) => {
-      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || hasOpenLayer()) return;
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || api.current.covered()) return;
       const t = e.target;
       if (t?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
       let dir = 0;
@@ -289,7 +301,7 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLon
     let locked = false;
     const onWheel = (e) => {
       if (!acc && Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
-      if (hasOpenLayer() || drag.current) return;
+      if (api.current.covered() || drag.current) return;
       e.preventDefault(); // لا رجوع في سجل المتصفح بسحب الإصبعين
       clearTimeout(idle);
       if (locked) {
@@ -340,7 +352,8 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLon
   useEffect(() => {
     if (column) onColumn?.(column);
   }, [column, onColumn]);
-  const slots = [base + step, base, base - step].filter((p) => p >= FIRST_PAGE && p <= LAST_PAGE);
+  const slots = [base + step, base, base - step].filter((p) => p + step - 1 >= MIN && p <= MAX);
+  const outside = bounds ? (p) => p < MIN || p > MAX : null;
   // سهما التقليب بجانب الزوج من الخارج، وعند ضيق الجانبين على حافة الشاشة
   const arrowAt = box ? Math.max(6, (box.w - column) / 2 - 56) : 0;
 
@@ -359,7 +372,7 @@ export default function Reader({ quran, onTap, onColumn, onPage, onSpread, onLon
         <div ref={trackRef} className="reader__track" onTransitionEnd={onTransitionEnd}>
           {slots.map((p) =>
             spread ? (
-              <Spread key={`s${p}`} quran={quran} start={p} area={half} shift={(base - p) / 2} current={p === base} marks={marks} />
+              <Spread key={`s${p}`} quran={quran} start={p} area={half} shift={(base - p) / 2} current={p === base} marks={marks} outside={outside} />
             ) : (
               <Sheet
                 key={p}
@@ -411,15 +424,15 @@ function ArrowButton({ side, at, shown, disabled, onClick }) {
 
 // زوج متقابل كالمصحف المفتوح: الفردية يمينًا والزوجية يسارًا، وبينهما كعب خفيف.
 // يُنتظر خطّا الصفحتين معًا قبل رسم أيٍّ منهما، فلا تظهر صفحة قبل أختها.
-function Spread({ quran, start, area, shift, current, marks }) {
+function Spread({ quran, start, area, shift, current, marks, outside }) {
   const right = usePageFont(start);
   const left = usePageFont(start + 1);
   const font = right === 'ready' && left === 'ready' ? 'ready' : right === 'failed' || left === 'failed' ? 'failed' : 'loading';
   return (
     <div className="spread" style={{ transform: `translate3d(${shift * 100}%, 0, 0)` }} aria-hidden={!current}>
-      <Sheet quran={quran} page={start} layout={pageLayout(quran, start, area)} half font={font} current={current} marks={marks} />
+      <Sheet quran={quran} page={start} layout={pageLayout(quran, start, area)} half font={font} current={current} marks={marks} outside={outside?.(start)} />
       <div className="spread__spine" aria-hidden="true" />
-      <Sheet quran={quran} page={start + 1} layout={pageLayout(quran, start + 1, area)} half font={font} current={current} marks={marks} />
+      <Sheet quran={quran} page={start + 1} layout={pageLayout(quran, start + 1, area)} half font={font} current={current} marks={marks} outside={outside?.(start + 1)} />
     </div>
   );
 }
@@ -427,13 +440,14 @@ function Spread({ quran, start, area, shift, current, marks }) {
 // ورقة الصفحة: الترويسة فوق الأسطر — الجزء يمينًا، ورقم الصفحة في الوسط، والسورة يسارًا.
 // والترويسة جزء من الورقة، فتتحرك معها عند السحب.
 // half: صفحة من زوج (موضعها في الزوج لا في الشريط)، وfont حال خطّي الزوج معًا
-function Sheet({ quran, page, layout, scroll, shift, current, marks, half, font: pairFont }) {
+// outside: صفحة من الزوج خارج حدود المصحف المحدود (ورد الختمة) — تظهر باهتة
+function Sheet({ quran, page, layout, scroll, shift, current, marks, half, font: pairFont, outside }) {
   const { sura, juz } = pageInfo(quran, page);
   const own = usePageFont(page);
   const font = pairFont ?? own;
   return (
     <section
-      className={`sheet${scroll ? ' sheet--scroll' : ''}${half ? ' sheet--half' : ''}${current ? ' sheet--current' : ''}`}
+      className={`sheet${scroll ? ' sheet--scroll' : ''}${half ? ' sheet--half' : ''}${current ? ' sheet--current' : ''}${outside ? ' sheet--outside' : ''}`}
       style={half ? { width: `${layout.width}px` } : { transform: `translate3d(${shift * 100}%, 0, 0)` }}
       aria-hidden={half ? undefined : !current}
       aria-label={`الصفحة ${toArabicDigits(page)}`}

@@ -72,35 +72,49 @@
   height: 18px;
 }
 
-.sidemenu__tabs {
-  flex: none;
-  display: flex;
-  padding: 4px 12px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.sidemenu__tabs button {
-  flex: 1;
-  padding: 10px 4px 11px;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--ink-muted);
-  border-bottom: 2.5px solid transparent;
-  margin-bottom: -1px;
-}
-
-.sidemenu__tabs button[aria-selected='true'] {
-  color: var(--accent-text);
-  font-weight: 600;
-  border-bottom-color: var(--accent);
-}
-
 .sidemenu__body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-bottom: var(--safe-bottom);
+}
+
+/* شريط التبويبات أسفل القائمة (٢٠٢٦-١١-١٢): أيقونة فوق اسمها، والمختار بلون التطبيق */
+.sidemenu__tabs {
+  flex: none;
+  display: flex;
+  padding: 4px 6px calc(4px + var(--safe-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.sidemenu__tabs button {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border-radius: var(--r-md);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.sidemenu__tabs svg {
+  width: 22px;
+  height: 22px;
+  padding: 1px 12px;
+  box-sizing: content-box;
+  border-radius: 999px;
+}
+
+.sidemenu__tabs button[aria-selected='true'] {
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.sidemenu__tabs button[aria-selected='true'] svg {
+  background: var(--accent-soft);
 }
 
 /* تبويب السور: فهرس بسيط */
@@ -300,6 +314,11 @@
   }
 
   .sidemenu__tabs button {
-    padding: 6px 4px 7px;
+    padding: 2px;
+  }
+
+  .sidemenu__tabs svg {
+    width: 18px;
+    height: 18px;
   }
 }

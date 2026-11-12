@@ -33,7 +33,8 @@ const ACTIONS = [
 export const ALONE_REPEATS = [1, 5, 10, 20, 50, FOREVER];
 const repeatName = (n) => (n === 1 ? 'مرة' : n === FOREVER ? 'بلا نهاية ∞' : toArabicDigits(n));
 
-export default function VerseMenu({ quran, pressed, onClose, onToast, onPlay, onPlayAlone }) {
+// noPlay: بلا مربع «تشغيل» (في صفحة ورد الختمة: الاستماع من المصحف نفسه)
+export default function VerseMenu({ quran, pressed, onClose, onToast, onPlay, onPlayAlone, noPlay }) {
   const [view, setView] = useState('menu');
   const { v } = pressed;
   // Esc يغلق المربع؛ وفي خيارات التشغيل يرجع إلى المربعات؛ وفي الملاحظة يحفظها أولًا كزرّ ✕ فيها
@@ -61,7 +62,7 @@ export default function VerseMenu({ quran, pressed, onClose, onToast, onPlay, on
       {(view === 'menu' || view === 'play') && (
         <VerseBox quran={quran} v={v} play={view === 'play'} onBack={() => setView('menu')} onClose={onClose}>
           {view === 'menu' ? (
-            <Tiles onChoose={choose} hasBookmark={readBookmarks().some((b) => b.v === v)} />
+            <Tiles onChoose={choose} hasBookmark={readBookmarks().some((b) => b.v === v)} noPlay={noPlay} />
           ) : (
             <PlayChoices
               onAlone={(n) => {
@@ -116,10 +117,10 @@ function VerseBox({ quran, v, play, onBack, onClose, children }) {
 }
 
 // المربعات الكبيرة: لكلٍّ أيقونة وتسمية تحتها
-function Tiles({ onChoose, hasBookmark }) {
+function Tiles({ onChoose, hasBookmark, noPlay }) {
   return (
     <div className="vmenu__picker" role="menu">
-      {ACTIONS.map((a) => (
+      {ACTIONS.filter((a) => !(noPlay && a.id === 'play')).map((a) => (
         <button key={a.id} type="button" role="menuitem" onClick={() => onChoose(a.id)} className="vmenu__action">
           <Icon d={a.icon} />
           <span className="vmenu__label">{a.id === 'bookmark' && hasBookmark ? 'إزالة' : a.name}</span>

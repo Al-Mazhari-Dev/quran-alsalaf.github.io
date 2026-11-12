@@ -1,0 +1,395 @@
+/* ===== تبويب الختمة في القائمة اليمنى (٢٠٢٦-١١-١٢) ===== */
+.khatma {
+  display: grid;
+  gap: 10px;
+  padding: 12px 12px 16px;
+}
+
+.khatma__card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.khatma__card--done {
+  text-align: center;
+  justify-items: center;
+}
+
+.khatma__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.khatma__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.khatma__index {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.khatma__hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.8;
+  color: var(--ink-muted);
+}
+
+/* اختيار الطريقة: بالأيام أو بالصفحات */
+.khatma__segment {
+  display: flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.khatma__segment button {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.khatma__segment button[aria-checked='true'] {
+  background: var(--bg);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+
+/* الخيارات الجاهزة */
+.khatma__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.khatma__chips button {
+  min-height: 36px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.khatma__chips button[aria-checked='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.khatma__custom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--text-sm);
+}
+
+.khatma__custom input {
+  width: 110px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+}
+
+.khatma__summary {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+}
+
+.khatma__summary--empty {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  background: var(--surface-2);
+}
+
+.khatma__summaryMain {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+/* يوم الختم: الميلادي ثم الهجري */
+.khatma__date {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.khatma__date span {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.khatma__date strong {
+  font-weight: 600;
+}
+
+.khatma__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.khatma__btn {
+  flex: 1;
+  min-height: 42px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.khatma__btn--primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.khatma__btn:disabled {
+  opacity: 0.45;
+}
+
+/* التقدّم */
+.khatma__bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.khatma__bar span {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.khatma__progress {
+  margin: -4px 0 0;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.khatma__progress strong {
+  color: var(--ink);
+}
+
+.khatma__status {
+  justify-self: start;
+  margin: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--ink-muted);
+}
+
+.khatma__status--done,
+.khatma__status--ahead {
+  color: var(--success);
+}
+
+.khatma__status--behind {
+  color: var(--danger);
+}
+
+/* ورد اليوم */
+.khatma__today {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: var(--r-md);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.khatma__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.khatma__pages {
+  font-size: var(--text-base);
+}
+
+.khatma__suras {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  margin-bottom: 6px;
+}
+
+.khatma__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+
+.khatma__link {
+  padding: 4px 2px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.khatma__link--danger {
+  color: var(--danger);
+}
+
+.khatma__count {
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+/* ===== صفحة الختمة: الورد وحده بملء الشاشة ===== */
+.kpage {
+  position: fixed;
+  inset: 0;
+  z-index: 42;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--safe-top);
+  background: var(--bg);
+  animation: kpage-in 240ms cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+@keyframes kpage-in {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+.kpage__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.kpage__back {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--ink);
+}
+
+.kpage__back:active {
+  background: var(--surface-2);
+}
+
+.kpage__back svg {
+  width: 22px;
+  height: 22px;
+}
+
+.kpage__title {
+  min-width: 0;
+  display: grid;
+}
+
+.kpage__title h2 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.kpage__title span {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpage__reader {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.kpage__foot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  padding: 6px 16px calc(6px + var(--safe-bottom));
+  border-top: 1px solid var(--border);
+}
+
+.kpage__done {
+  width: min(360px, 100%);
+  flex: none;
+}
+
+.kpage__hint {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+/* الجوال الأفقي: ارتفاع قصير، فيُضغط الرأس والذيل */
+@media (orientation: landscape) and (max-height: 540px) {
+  .kpage__head {
+    padding: 2px 10px;
+  }
+
+  .kpage__back {
+    width: 32px;
+    height: 32px;
+  }
+
+  .kpage__foot {
+    min-height: 44px;
+    padding-block: 4px calc(4px + var(--safe-bottom));
+  }
+
+  .kpage__done {
+    min-height: 34px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .khatma__btn:not(:disabled):hover {
+    filter: brightness(0.96);
+  }
+
+  .kpage__back:hover {
+    background: var(--surface-2);
+  }
+}
