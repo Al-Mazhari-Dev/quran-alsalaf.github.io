@@ -8,13 +8,15 @@ import { useLayer } from '../lib/layers.js';
 
 /*
   الضغط المطوّل على آية (الفصل ٤): بطاقة عائمة صغيرة فوق الآية، أيقوناتها بترتيب ثابت
-  تعلو كلًّا تسميتُها: تفسير · معاني · عمل · ملاحظة · علامة («فوائد» تُضاف لاحقًا إن طُلبت).
+  تعلو كلًّا تسميتُها: تشغيل · تفسير · معاني · عمل · ملاحظة · علامة («فوائد» تُضاف لاحقًا إن طُلبت).
+  • تشغيل ⇐ تُغلق البطاقة وتبدأ القراءة من هذه الآية بلا نهاية ولا تكرار (playFromVerse في App.jsx).
   • تفسير/معاني/عمل ⇐ بطاقة عائمة أعلى الشاشة بمحتوى هذه الآية وحدها، فيها زرّا نسخ وإغلاق.
     والتفسير يعرض التفسيرين معًا: المختصر ثم الميسّر، ولكلٍّ زرّ نسخ بجانب عنوانه.
   • ملاحظة ⇐ كتابة ملاحظة الآية أو تعديلها (واحدة لكل آية).
   • علامة ⇐ تُحوَّل الآية علامةً مرجعية فورًا بلا بطاقة وسيطة (أو تُزال إن كانت علامة).
 */
 const ACTIONS = [
+  { id: 'play', name: 'تشغيل', icon: 'M8 5.5v13l10.5-6.5L8 5.5Z' },
   { id: 'tafsir', name: 'تفسير', icon: 'M5 4.5h9.5a2.5 2.5 0 0 1 2.5 2.5v12.5H7.5A2.5 2.5 0 0 1 5 17V4.5ZM5 17a2.5 2.5 0 0 1 2.5-2.5H17M8.5 8h5M8.5 11h5' },
   { id: 'meanings', name: 'معاني', icon: 'M4 6.5h16M4 12h10M4 17.5h13' },
   { id: 'actions', name: 'عمل', icon: 'M5 12.5l4 4 10-10' },
@@ -22,7 +24,7 @@ const ACTIONS = [
   { id: 'bookmark', name: 'علامة', icon: 'M7 4.5h10v15l-5-3.6-5 3.6v-15Z' },
 ];
 
-export default function VerseMenu({ quran, pressed, onClose, onToast }) {
+export default function VerseMenu({ quran, pressed, onClose, onToast, onPlay }) {
   const [view, setView] = useState('menu');
   const { v, rect } = pressed;
   // Esc يغلق البطاقة؛ وفي الملاحظة يحفظها أولًا كزرّ ✕ فيها
@@ -30,6 +32,11 @@ export default function VerseMenu({ quran, pressed, onClose, onToast }) {
   useLayer(() => (view === 'note' && saveNote.current ? saveNote.current() : onClose()));
 
   const choose = (id) => {
+    if (id === 'play') {
+      onClose();
+      onPlay(v);
+      return;
+    }
     if (id === 'bookmark') {
       const result = toggleBookmark(v);
       if (result === 'full') onToast(`بلغت العلامات حدّها (${toArabicDigits(MAX_BOOKMARKS)})؛ احذف إحداها من القائمة الجانبية لتضيف غيرها.`);

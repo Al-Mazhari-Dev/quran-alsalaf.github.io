@@ -15,7 +15,8 @@
   position: absolute;
   inset-inline: 0;
   margin-inline: auto;
-  width: min(340px, calc(100% - 24px));
+  /* ستة أزرار (٢٠٢٦-١١-١٢، بإضافة «تشغيل»): تتسع في الجوالات الضيقة (عرض ٣٦٠) */
+  width: min(372px, calc(100% - 20px));
   display: flex;
   justify-content: space-around;
   padding: 8px 6px;
@@ -37,7 +38,7 @@
   display: grid;
   justify-items: center;
   gap: 4px;
-  min-width: 56px;
+  min-width: 52px;
   padding: 4px 2px;
   border-radius: var(--r-md);
   color: var(--ink);
@@ -260,7 +261,7 @@
   }
 
   .vmenu__picker {
-    width: min(390px, calc(100% - 24px));
+    width: min(420px, calc(100% - 24px));
   }
 
   .vmenu__action:hover {

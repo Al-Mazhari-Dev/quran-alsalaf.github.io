@@ -6,10 +6,19 @@ test.beforeEach(async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
 });
 
-test('الضغط المطوّل يفتح البطاقة بخياراتها الخمسة ويظلّل الآية', async ({ page }) => {
+test('الضغط المطوّل يفتح البطاقة بخياراتها الستة ويظلّل الآية', async ({ page }) => {
   await longPress(page, 2);
   const items = page.locator('.vmenu__picker [role="menuitem"]');
-  await expect(items).toHaveText(['تفسير', 'معاني', 'عمل', 'ملاحظة', 'علامة']);
+  await expect(items).toHaveText(['تشغيل', 'تفسير', 'معاني', 'عمل', 'ملاحظة', 'علامة']);
+  // الستة كلها داخل البطاقة وداخل الشاشة
+  const card = await page.locator('.vmenu__picker').boundingBox();
+  const vw = page.viewportSize().width;
+  for (const b of await items.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON()))) {
+    expect(b.left).toBeGreaterThanOrEqual(card.x - 0.5);
+    expect(b.right).toBeLessThanOrEqual(card.x + card.width + 0.5);
+  }
+  expect(card.x).toBeGreaterThanOrEqual(0);
+  expect(card.x + card.width).toBeLessThanOrEqual(vw);
   await expect(word(page, 2)).toHaveClass(/w--selected/);
   // النقر خارجها يغلقها
   await page.locator('.vmenu__backdrop').click({ position: { x: 10, y: 10 } });

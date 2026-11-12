@@ -1,23 +1,16 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toArabicDigits } from '../data/quran.js';
 import './RangePicker.css';
 import { useLayer } from '../lib/layers.js';
 
 /*
-  قائمة اختيار آية لتحديد النطاق (الفصل ٤): تمرير مستمر — السور بعناوينها، وتحت كل سورة
-  آياتها مرقّمة مع معاينة قصيرة لأولها. وتُفتح عند سورة الموضع الحالي. وعند اختيار آية
-  النهاية لا يُعرض ما قبل آية البداية.
+  قائمة اختيار آية (الفصل ٤): لتحديد مقدار الاستماع ومقدار صفحات المحتوى ونقل العلامة.
+  السور مطوية بأسمائها، وبجانب كل سورة سهم يفتح آياتها (مرقّمة مع معاينة قصيرة لأولها) ويطويها
+  (٢٠٢٦-١١-١٢، بطلب صاحب المشروع، بدل القائمة الممتدة بكل الآيات). وسورة واحدة مفتوحة في كل
+  مرة: فتح سورة يطوي التي قبلها. وعند الفتح تكون سورة الموضع الحالي مفتوحة وظاهرة (وفي اختيار
+  النهاية سورة آية البداية)، ولا يُعرض في اختيار النهاية ما قبل آية البداية.
 
-  القائمة الكاملة ٦٢٣٦ آية، فبناء أزرارها كلها دفعة واحدة عند الفتح يُجمّد الصفحة لثوانٍ
-  (تجربة فعلية على الجوال). فتُبنى أزرار سورة واحدة فقط أول الأمر (سورة الموضع الحالي)،
-  وبقية السور تُبنى تباعًا متى اقتربت من الشاشة أثناء التمرير (IntersectionObserver)، مع
-  حفظ ارتفاعها التقريبي (containIntrinsicSize) قبل ذلك حتى لا يقفز شريط التمرير.
-
-  والمُلاحَظ («React.StrictMode» بوضع التطوير فقط): مراقبة كل سورة من مرجعها (ref) مباشرة،
-  مع فصل تفكيكها (disconnect) في useEffect منفصل، يجعل «الوضع الصارم» يُفكِّك المراقبة فور
-  التركيب (يُشغِّل كل تفكيك مرة تجريبية) بلا من يعيدها — فتُشلّ القائمة كليًّا بعد أول رسم
-  (لوحظ فعلياً: لا سطر يُبنى بعد الأول أبداً). فالمراقبة والتفكيك كلاهما في نفس الأثر (useEffect
-  بلا اعتماديات)، ليعيد «الوضع الصارم» بناءهما معاً سواءً.
+  وأكبر ما يُبنى من الأزرار سورة واحدة (٢٨٦ آية في البقرة)، فلا حاجة لبنائها تباعًا عند التمرير.
 */
 const PREVIEW_WORDS = 7;
 
@@ -37,33 +30,15 @@ export default function RangePicker({ quran, mode, start, near, onPick, onClose,
     return out.map((x, k) => ({ ...x, to: (out[k + 1]?.from ?? quran.verses.length) - 1 })).filter((x) => x.s >= firstSura);
   }, [quran, firstSura]);
 
-  // السورة المستهدفة تُبنى فورًا (لتصحّ scrollIntoView)، وبقيتها عند الحاجة
-  const [built, setBuilt] = useState(() => new Set([targetSura]));
+  // السورة المفتوحة (أو null إن طُويت كلها)
+  const [open, setOpen] = useState(targetSura);
+  const toggle = (s) => setOpen((o) => (o === s ? null : s));
 
+  // السورة المفتوحة يُمرَّر إلى عنوانها: عند الفتح، وعند فتح غيرها (فطيّ ما فوقها لا يُبعده عن الشاشة)
   useLayoutEffect(() => {
-    const el = listRef.current?.querySelector(`[data-sura="${targetSura}"]`);
-    el?.scrollIntoView({ block: 'start' });
-  }, [targetSura]);
-
-  // مراقبة كل السور دفعة واحدة بعد الرسم الأول (لا مرجعًا لكل سورة)، فيبقى الإعداد والتفكيك
-  // في أثر واحد يُعاد كلاهما معًا سليمين لو أعاد «الوضع الصارم» تشغيلهما تجريبيًا
-  useEffect(() => {
-    const sections = listRef.current?.querySelectorAll('.rpick__sura') ?? [];
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const found = entries.filter((e) => e.isIntersecting).map((e) => Number(e.target.dataset.sura));
-        if (!found.length) return;
-        setBuilt((prev) => {
-          const next = new Set(prev);
-          found.forEach((s) => next.add(s));
-          return next;
-        });
-      },
-      { rootMargin: '400px 0px' }
-    );
-    sections.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, [suras]);
+    if (open == null) return;
+    listRef.current?.querySelector(`[data-sura="${open}"]`)?.scrollIntoView({ block: 'start' });
+  }, [open]);
 
   return (
     <div className="rpick" role="dialog" aria-label={heading}>
@@ -79,13 +54,19 @@ export default function RangePicker({ quran, mode, start, near, onPick, onClose,
         {suras.map(({ s, from, to }) => {
           const begin = mode === 'end' && s === firstSura ? start : from;
           const count = to - begin + 1;
+          const expanded = open === s;
           return (
-            <section key={s} className="rpick__sura" data-sura={s} style={{ containIntrinsicSize: `auto ${count * 52 + 48}px` }}>
+            <section key={s} className={`rpick__sura${expanded ? ' rpick__sura--open' : ''}`} data-sura={s}>
               <h3>
-                سورة {quran.suras[s - 1].name}
-                <span>{toArabicDigits(quran.suras[s - 1].count)} آية</span>
+                <button type="button" className="rpick__toggle" aria-expanded={expanded} onClick={() => toggle(s)}>
+                  <span className="rpick__name">سورة {quran.suras[s - 1].name}</span>
+                  <span className="rpick__count">{toArabicDigits(quran.suras[s - 1].count)} آية</span>
+                  <svg className="rpick__chev" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
               </h3>
-              {built.has(s) &&
+              {expanded &&
                 Array.from({ length: count }, (_, i) => begin + i).map((v) => (
                   <button key={v} type="button" className="rpick__verse" onClick={() => onPick(v)}>
                     <span className="rpick__num">{toArabicDigits(quran.verses[v].a)}</span>

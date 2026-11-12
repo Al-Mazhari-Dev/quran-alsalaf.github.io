@@ -4,10 +4,27 @@ import { QURAN, clickTopbar, longPress, openApp, pickVerse, shownPages, stored }
 
 const side = (page) => page.locator('.sidemenu');
 
+// نص خانة البحث نفسه في الصفحة الرئيسية وداخل البحث، ويتسع كاملًا ولو في جوال ضيق (عرض ٣٦٠)
+test('خانة البحث: «ابحث في المصحف بالكلمات والأرقام» في الصفحة الرئيسية وداخل البحث', async ({ page }, testInfo) => {
+  if (!testInfo.project.name.includes('laptop')) await page.setViewportSize({ width: 360, height: 780 });
+  await openApp(page, { 'hq.page': '1' });
+  const label = page.locator('.topbar__search span');
+  await expect(label).toHaveText('ابحث في المصحف بالكلمات والأرقام');
+  // لا يُقص النص: عرضه كاملًا داخل الخانة
+  const fits = await label.evaluate((el) => {
+    const box = el.parentElement;
+    const pad = parseFloat(getComputedStyle(box).paddingLeft);
+    return el.getBoundingClientRect().left >= box.getBoundingClientRect().left + pad - 0.5 && box.scrollWidth <= box.clientWidth;
+  });
+  expect(fits).toBe(true);
+  await clickTopbar(page, 'ابحث في المصحف بالكلمات والأرقام');
+  await expect(page.getByPlaceholder('ابحث في المصحف بالكلمات والأرقام')).toBeFocused();
+});
+
 test('البحث بنص الآية مع تطبيع الهمزات والتاء المربوطة، والانتقال إلى النتيجة، وسجل البحث', async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
   await clickTopbar(page, 'بحث في المصحف');
-  const box = page.getByPlaceholder('ابحث بالكلمات أو الأرقام…');
+  const box = page.getByPlaceholder('ابحث في المصحف بالكلمات والأرقام');
   await expect(box).toBeFocused();
   // «اصحاب الكهف» بلا همزة، و«والرقيم»
   await box.fill('اصحاب الكهف والرقيم');
@@ -33,13 +50,13 @@ test('البحث بنص الآية مع تطبيع الهمزات والتاء �
 test('البحث باسم السورة والتاء المربوطة هاءً', async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
   await clickTopbar(page, 'بحث في المصحف');
-  await page.getByPlaceholder('ابحث بالكلمات أو الأرقام…').fill('سوره البقره');
+  await page.getByPlaceholder('ابحث في المصحف بالكلمات والأرقام').fill('سوره البقره');
   await expect(page.locator('.searchov__sura')).toContainText(['سورة البقرة']);
   await page.locator('.searchov__sura').first().click();
   await expect.poll(() => shownPages(page)).toContain(2);
   // حرف واحد لا يبحث
   await clickTopbar(page, 'بحث في المصحف');
-  await page.getByPlaceholder('ابحث بالكلمات أو الأرقام…').fill('ا');
+  await page.getByPlaceholder('ابحث في المصحف بالكلمات والأرقام').fill('ا');
   await expect(page.locator('.searchov__verse, .searchov__sura')).toHaveCount(0);
   await page.getByRole('button', { name: 'رجوع' }).click();
   await expect(page.locator('.searchov')).toHaveCount(0);
@@ -48,7 +65,7 @@ test('البحث باسم السورة والتاء المربوطة هاءً', 
 test('البحث بالأرقام: الصفحة ثم السورة ثم الجزء، بأرقام عربية أو إنجليزية، والانتقال إليها', async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
   await clickTopbar(page, 'بحث في المصحف');
-  const box = page.getByPlaceholder('ابحث بالكلمات أو الأرقام…');
+  const box = page.getByPlaceholder('ابحث في المصحف بالكلمات والأرقام');
   const hits = page.locator('.searchov__numHit');
 
   // ٣ (رقم واحد يكفي): ثلاث نتائج بالترتيب
@@ -92,7 +109,7 @@ const flashed = (page) => page.locator('.sheet--current .w--flash');
 test('البحث بالسورة ورقم الآية: «البقرة ٢٥٥» أولًا، والانتقال إلى صفحتها، وتمييزها مؤقتًا ثم زواله', async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
   await clickTopbar(page, 'بحث في المصحف');
-  const box = page.getByPlaceholder('ابحث بالكلمات أو الأرقام…');
+  const box = page.getByPlaceholder('ابحث في المصحف بالكلمات والأرقام');
   const results = page.locator('.searchov__verse, .searchov__sura');
 
   // بأرقام عربية وإنجليزية، و«سورة»، وبلا «ال»، و«٢:٢٥٥»: آية الكرسي نتيجة أولى، ثم سورة البقرة
@@ -125,7 +142,7 @@ test('البحث بالسورة ورقم الآية: «البقرة ٢٥٥» أ�
 test('البحث بالسورة ورقم أكبر من آياتها: السورة وحدها ومعها عدد آياتها', async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
   await clickTopbar(page, 'بحث في المصحف');
-  const box = page.getByPlaceholder('ابحث بالكلمات أو الأرقام…');
+  const box = page.getByPlaceholder('ابحث في المصحف بالكلمات والأرقام');
   await box.fill('البقرة 300');
   await expect(page.locator('.searchov__sura')).toHaveText(['٢سورة البقرة']);
   await expect(page.locator('.searchov__suraNote')).toHaveText('سورة البقرة ٢٨٦ آية');
@@ -146,7 +163,7 @@ test('البحث بالسورة ورقم أكبر من آياتها: السور�
 test('نتيجة آية في البحث بالكلمات تُميَّز كذلك في صفحتها', async ({ page }) => {
   await openApp(page, { 'hq.page': '1' });
   await clickTopbar(page, 'بحث في المصحف');
-  await page.getByPlaceholder('ابحث بالكلمات أو الأرقام…').fill('اصحاب الكهف والرقيم');
+  await page.getByPlaceholder('ابحث في المصحف بالكلمات والأرقام').fill('اصحاب الكهف والرقيم');
   await page.locator('.searchov__verse').first().click();
   await expect.poll(() => shownPages(page)).toContain(294);
   await expect(flashed(page).first()).toBeVisible();
@@ -161,7 +178,7 @@ test.describe('الجوال الأفقي', () => {
     await openApp(page, { 'hq.page': '1' });
     await clickTopbar(page, 'بحث في المصحف');
     // البقرة ٢٥٦ آخر آية في الصفحة ٤٢
-    await page.getByPlaceholder('ابحث بالكلمات أو الأرقام…').fill('البقرة 256');
+    await page.getByPlaceholder('ابحث في المصحف بالكلمات والأرقام').fill('البقرة 256');
     await page.locator('.searchov__refHit').click();
     await expect.poll(() => shownPages(page)).toContain(42);
     await expect(flashed(page).first()).toBeInViewport();
