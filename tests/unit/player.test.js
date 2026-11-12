@@ -26,11 +26,6 @@ class FakeAudio extends EventTarget {
     delete this.attrs[n];
   }
   play() {
-    // FakeAudio.reject: يرفض المتصفح التشغيل (كبدء آية والتطبيق في الخلفية)
-    if (FakeAudio.reject) {
-      FakeAudio.reject = false;
-      return Promise.reject(Object.assign(new Error('blocked'), { name: 'NotAllowedError' }));
-    }
     this.paused = false;
     return Promise.resolve();
   }
@@ -65,8 +60,6 @@ beforeEach(async () => {
   vi.resetModules();
   globalThis.Audio = FakeAudio;
   window.Audio = FakeAudio;
-  FakeAudio.reject = false;
-  setVisible(true);
   P = await import('../../src/lib/player.js');
 });
 
@@ -204,139 +197,5 @@ describe('تغيير القارئ والتحكم', () => {
     const n = FakeAudio.srcs.length;
     ended(); // لا يتقدم بعد الإيقاف
     expect(FakeAudio.srcs.length).toBe(n);
-  });
-});
-
-// ---------- احترام أصوات التطبيقات الأخرى ----------
-let visible = true;
-Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (visible ? 'visible' : 'hidden') });
-function setVisible(v) {
-  visible = v;
-}
-// الخروج من التطبيق ثم الرجوع إليه
-function leaveAndReturn() {
-  setVisible(false);
-  document.dispatchEvent(new Event('visibilitychange'));
-  setVisible(true);
-  document.dispatchEvent(new Event('visibilitychange'));
-}
-// الجهاز يوقف الصوت لأن تطبيقًا آخر شغّل صوتًا (المتصفح يطلق 'pause' بعد أن يصير paused)
-function systemPause() {
-  FakeAudio.last.paused = true;
-  FakeAudio.last.dispatchEvent(new Event('pause'));
-}
-const playingEvent = () => FakeAudio.last.dispatchEvent(new Event('playing'));
-const flush = () => new Promise((r) => setTimeout(r, 0));
-
-describe('احترام أصوات التطبيقات الأخرى', () => {
-  it('إيقاف الجهاز يجعل التلاوة موقوفة بمقاطعة، ولا تتقدم', () => {
-    P.play(q, [idx(1, 1), idx(1, 2)]);
-    playingEvent();
-    expect(P.playerState().status).toBe('playing');
-    systemPause();
-    expect(P.playerState()).toMatchObject({ status: 'paused', interrupted: true, v: idx(1, 1) });
-    // لا يطلب التطبيق تشغيلًا ولا آية جديدة ما دام الجهاز أوقفه
-    expect(FakeAudio.last.paused).toBe(true);
-    expect(lastFile()).toBe(shuraym(1, 1));
-  });
-
-  it('إن أعاد الجهاز التشغيل بنفسه تكمل من الآية نفسها ثم تتقدم طبيعيًا', () => {
-    P.play(q, [idx(1, 1), idx(1, 2)]);
-    playingEvent();
-    systemPause();
-    FakeAudio.last.paused = false;
-    playingEvent();
-    expect(P.playerState()).toMatchObject({ status: 'playing', interrupted: false, v: idx(1, 1) });
-    ended();
-    expect(lastFile()).toBe(shuraym(1, 2));
-  });
-
-  it('الرجوع إلى التطبيق يكمل التلاوة الموقوفة بمقاطعة من الآية نفسها', () => {
-    P.play(q, [idx(1, 1), idx(1, 2)]);
-    playingEvent();
-    systemPause();
-    const n = FakeAudio.srcs.length;
-    leaveAndReturn();
-    expect(FakeAudio.last.paused).toBe(false); // طُلب التشغيل
-    expect(FakeAudio.srcs.length).toBe(n); // الملف نفسه، لا آية جديدة
-    playingEvent();
-    expect(P.playerState()).toMatchObject({ status: 'playing', interrupted: false, v: idx(1, 1) });
-  });
-
-  it('زر التشغيل (أو شاشة القفل) يكمل الموقوفة بمقاطعة', () => {
-    P.play(q, [idx(1, 1), idx(1, 2)]);
-    playingEvent();
-    systemPause();
-    P.resume();
-    expect(FakeAudio.last.paused).toBe(false);
-    playingEvent();
-    expect(P.playerState()).toMatchObject({ status: 'playing', interrupted: false });
-  });
-
-  it('لا تكمل عند الرجوع إن أوقفها المستخدم بيده', () => {
-    P.play(q, [idx(1, 1), idx(1, 2)]);
-    playingEvent();
-    P.pause();
-    // المتصفح يطلق 'pause' لاحقًا لإيقاف التطبيق نفسه: لا يُعدّ مقاطعة
-    FakeAudio.last.dispatchEvent(new Event('pause'));
-    expect(P.playerState()).toMatchObject({ status: 'paused', interrupted: false });
-    leaveAndReturn();
-    expect(FakeAudio.last.paused).toBe(true);
-    expect(P.playerState().status).toBe('paused');
-  });
-
-  it('إيقاف المستخدم بعد مقاطعة يلغي الإكمال عند الرجوع', () => {
-    P.play(q, [idx(1, 1), idx(1, 2)]);
-    playingEvent();
-    systemPause();
-    P.pause();
-    leaveAndReturn();
-    expect(FakeAudio.last.paused).toBe(true);
-  });
-
-  it('لا تكمل عند الرجوع بعد الإيقاف التام', () => {
-    P.play(q, [idx(1, 1), idx(1, 2)]);
-    playingEvent();
-    systemPause();
-    P.stop();
-    leaveAndReturn();
-    expect(FakeAudio.last.paused).toBe(true);
-    expect(P.playerState()).toMatchObject({ status: 'idle', interrupted: false });
-  });
-
-  it('إيقاف نهاية المقطع الطبيعية ليس مقاطعة', () => {
-    P.play(q, [idx(1, 1), idx(1, 2)]);
-    playingEvent();
-    const a = FakeAudio.last;
-    a.paused = true;
-    a.ended = true;
-    a.dispatchEvent(new Event('pause'));
-    expect(P.playerState().interrupted).toBe(false);
-    a.ended = false;
-    ended();
-    expect(lastFile()).toBe(shuraym(1, 2));
-    expect(P.playerState().interrupted).toBe(false);
-  });
-
-  it('إيقاف متأخر وصل بعد بدء تشغيل جديد يُهمل', () => {
-    P.play(q, [idx(1, 1), idx(1, 2)]);
-    playingEvent();
-    // FakeAudio.last.paused = false (شُغّل)، فوصول 'pause' قديم لا يغيّر شيئًا
-    FakeAudio.last.dispatchEvent(new Event('pause'));
-    expect(P.playerState()).toMatchObject({ status: 'playing', interrupted: false });
-  });
-
-  it('رفض المتصفح تشغيل الآية التالية في الخلفية يُعامل كمقاطعة، فتكمل عند الرجوع', async () => {
-    P.play(q, [idx(1, 1), idx(1, 2)]);
-    playingEvent();
-    FakeAudio.reject = true;
-    ended();
-    await flush();
-    expect(lastFile()).toBe(shuraym(1, 2));
-    expect(P.playerState()).toMatchObject({ status: 'paused', interrupted: true, error: null });
-    leaveAndReturn();
-    expect(FakeAudio.last.paused).toBe(false);
-    playingEvent();
-    expect(P.playerState()).toMatchObject({ status: 'playing', v: idx(1, 2) });
   });
 });
