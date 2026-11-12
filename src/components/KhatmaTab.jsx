@@ -23,10 +23,10 @@ import './Khatma.css';
 
 /*
   تبويب «الختمة» في القائمة اليمنى (٢٠٢٦-١١-١٢): ختمة الورد اليومي (src/lib/khatma.js).
-  • بلا ختمة: نموذج الإنشاء — بالأيام أو بالصفحات يوميًّا، ويظهر المقابل ويوم الختم قبل التأكيد.
-  • أثناء الختمة: التقدّم، وورد اليوم بزرّي «اقرأ الورد» (يفتح صفحة الختمة) و«أتممت الورد»،
+  • بلا ختمة: نموذج الإنشاء — بالأيام أو بالصفحات يوميا، ويظهر المقابل ويوم الختم قبل التأكيد.
+  • أثناء الختمة: التقدم، وورد اليوم بزري «اقرأ الورد» (يفتح صفحة الختمة) و«أتممت الورد»،
     ويوم الختم المتوقع بالميلادي والهجري، وتعديل الخطة وحذف الختمة.
-  • بعد الختم: تهنئة وزرّ «ابدأ ختمة جديدة».
+  • بعد الختم: تهنئة وزر «ابدأ ختمة جديدة».
 */
 const n = toArabicDigits;
 
@@ -47,7 +47,7 @@ export default function KhatmaTab({ quran, onRead, onToast }) {
         onSubmit={(mode, value) => {
           if (wird) {
             editWird(mode, value, today);
-            onToast('عُدّلت الخطة');
+            onToast('عدلت الخطة');
           } else startWird(mode, value, today);
           setEditing(false);
         }}
@@ -86,22 +86,21 @@ function PlanForm({ editing, initial, from, start, doneCount, onSubmit, onCancel
     <div className="khatma">
       <section className="khatma__card">
         <h3 className="khatma__title">{editing ? 'تعديل الخطة' : 'ختمة جديدة'}</h3>
-        <p className="khatma__hint">
-          {editing
-            ? `يُعاد تقسيم ما بقي (${pagesText(remaining, n)}، من الصفحة ${n(from)}) دون أن يضيع ما قرأته.`
-            : 'حدّد في كم يومًا تختم، أو كم صفحة تقرأ كل يوم، فيُقسَّم المصحف أورادًا تقرؤها في صفحة الختمة.'}
-        </p>
+        {/* في الإنشاء بلا جملة شرح (بطلب صاحب المشروع)؛ وفي التعديل يبين ما يعاد تقسيمه */}
+        {editing && (
+          <p className="khatma__hint">{`يعاد تقسيم ما بقي (${pagesText(remaining, n)}، من الصفحة ${n(from)}) دون أن يضيع ما قرأته.`}</p>
+        )}
 
         <div className="khatma__segment" role="radiogroup" aria-label="طريقة التحديد">
           <button type="button" role="radio" aria-checked={mode === 'days'} onClick={() => switchMode('days')}>
             بالأيام
           </button>
           <button type="button" role="radio" aria-checked={mode === 'pages'} onClick={() => switchMode('pages')}>
-            بالصفحات يوميًّا
+            بالصفحات يوميا
           </button>
         </div>
 
-        <div className="khatma__chips" role="radiogroup" aria-label={mode === 'days' ? 'عدد الأيام' : 'عدد الصفحات يوميًّا'}>
+        <div className="khatma__chips" role="radiogroup" aria-label={mode === 'days' ? 'عدد الأيام' : 'عدد الصفحات يوميا'}>
           {presets.map((p) => (
             <button
               key={p}
@@ -123,7 +122,7 @@ function PlanForm({ editing, initial, from, start, doneCount, onSubmit, onCancel
 
         {custom && (
           <label className="khatma__custom">
-            <span>{mode === 'days' ? 'عدد الأيام' : 'عدد الصفحات يوميًّا'}</span>
+            <span>{mode === 'days' ? 'عدد الأيام' : 'عدد الصفحات يوميا'}</span>
             <input
               type="text"
               inputMode="numeric"
@@ -138,7 +137,7 @@ function PlanForm({ editing, initial, from, start, doneCount, onSubmit, onCancel
         {plan ? (
           <div className="khatma__summary" aria-live="polite">
             <p className="khatma__summaryMain">
-              {daysText(plan.days, n)}، {mode === 'days' ? (plan.min === plan.max ? pagesText(plan.max, n) : `${n(plan.min)}–${n(plan.max)} صفحة`) : pagesText(chosen, n)} يوميًّا
+              {daysText(plan.days, n)}، {mode === 'days' ? (plan.min === plan.max ? pagesText(plan.max, n) : `${n(plan.min)}–${n(plan.max)} صفحة`) : pagesText(chosen, n)} يوميا
             </p>
             <p className="khatma__date">
               <span>تختم يوم</span>
@@ -147,7 +146,7 @@ function PlanForm({ editing, initial, from, start, doneCount, onSubmit, onCancel
             </p>
           </div>
         ) : (
-          <p className="khatma__summary khatma__summary--empty">اكتب عددًا من ١ إلى {n(remaining)}</p>
+          <p className="khatma__summary khatma__summary--empty">اكتب عددا من ١ إلى {n(remaining)}</p>
         )}
 
         <div className="khatma__actions">
@@ -175,13 +174,13 @@ function Active({ quran, wird, today, doneCount, onRead, onEdit, onToast }) {
   const status = s.behind
     ? { text: `متأخر ${daysText(s.behind, n)} عن الخطة`, kind: 'behind' }
     : s.ahead
-      ? { text: `متقدّم على الخطة ${daysText(s.ahead, n)}`, kind: 'ahead' }
+      ? { text: `متقدم على الخطة ${daysText(s.ahead, n)}`, kind: 'ahead' }
       : s.doneToday
         ? { text: 'أتممت ورد اليوم ✓', kind: 'done' }
         : { text: 'على الخطة', kind: 'on' };
 
   const complete = () => {
-    if (completeWird(today) === 'next') onToast('أحسنت، سُجّل الورد');
+    if (completeWird(today) === 'next') onToast('أحسنت، سجل الورد');
   };
 
   return (
@@ -193,7 +192,7 @@ function Active({ quran, wird, today, doneCount, onRead, onEdit, onToast }) {
             الورد {n(s.index)} من {n(s.total)}
           </span>
         </header>
-        <div className="khatma__bar" role="progressbar" aria-label="تقدّم الختمة" aria-valuemin={0} aria-valuemax={100} aria-valuenow={s.percent}>
+        <div className="khatma__bar" role="progressbar" aria-label="تقدم الختمة" aria-valuemin={0} aria-valuemax={100} aria-valuenow={s.percent}>
           <span style={{ width: `${s.percent}%` }} />
         </div>
         <p className="khatma__progress">
@@ -226,7 +225,7 @@ function Active({ quran, wird, today, doneCount, onRead, onEdit, onToast }) {
         <div className="khatma__footer">
           {confirm ? (
             <>
-              <span>حذف الختمة وكل تقدّمها؟</span>
+              <span>حذف الختمة وكل تقدمها؟</span>
               <button type="button" className="khatma__link khatma__link--danger" onClick={removeWird}>
                 نعم، احذفها
               </button>
@@ -258,7 +257,7 @@ function Finished({ date, doneCount }) {
     <div className="khatma">
       <section className="khatma__card khatma__card--done">
         <h3 className="khatma__title">أتممت الختمة</h3>
-        <p className="khatma__hint">تقبّل الله منك، وجعل القرآن ربيع قلبك.</p>
+        <p className="khatma__hint">تقبل الله منك، وجعل القرآن ربيع قلبك.</p>
         <p className="khatma__date">
           <span>ختمت يوم</span>
           <strong>{dates.gregorian}</strong>

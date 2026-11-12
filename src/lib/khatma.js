@@ -1,20 +1,20 @@
 // الختمة (٢٠٢٦-١١-١٢): ختمة الورد اليومي — يحدد المستخدم مدتها بالأيام أو قدر وردها بالصفحات،
-// فيُقسَّم المصحف (٦٠٤ صفحات) أورادًا متتابعة، يُقرأ كلٌّ منها في صفحة الختمة ثم يُسجَّل.
+// فيقسم المصحف (٦٠٤ صفحات) أورادا متتابعة، يقرأ كل منها في صفحة الختمة ثم يسجل.
 //
-// • الورد يتبع الإنجاز لا التاريخ: «ورد اليوم» هو دائمًا أول ورد لم يُتمَّ، فلا يضيع شيء إن فات يوم،
-//   ويُعرف التأخر والتقدّم بمقارنة ما أُتمّ بأيام الخطة.
-// • ختمة ورد واحدة فقط في وقت واحد. والختمة تُحفظ بنوعها (type) في قائمة، فيُضاف لاحقًا نوع آخر
+// • الورد يتبع الإنجاز لا التاريخ: «ورد اليوم» هو دائما أول ورد لم يتم، فلا يضيع شيء إن فات يوم،
+//   ويعرف التأخر والتقدم بمقارنة ما أتم بأيام الخطة.
+// • ختمة ورد واحدة فقط في وقت واحد. والختمة تحفظ بنوعها (type) في قائمة، فيضاف لاحقا نوع آخر
 //   («ختمة التدبر» بطلب صاحب المشروع) يجتمع مع ختمة الورد دون تغيير طريقة الحفظ.
 // • كل شيء على الجهاز وحده (localStorage)، كبقية بيانات المستخدم.
 import { useEffect, useState } from 'react';
 import { FIRST_PAGE, LAST_PAGE } from './position.js';
 
 const KEY = 'hq.khatmas';
-const DONE_KEY = 'hq.khatmasDone'; // عدد الختمات المتمَّة: { wird: n }
+const DONE_KEY = 'hq.khatmasDone'; // عدد الختمات المتمة: { wird: n }
 const EVENT = 'hq-khatma';
 
 export const TOTAL_PAGES = LAST_PAGE - FIRST_PAGE + 1;
-// الخيارات الجاهزة عند الإنشاء (ويُكتب غيرها باليد)
+// الخيارات الجاهزة عند الإنشاء (ويكتب غيرها باليد)
 export const DAY_PRESETS = [7, 10, 15, 30, 60];
 export const PAGE_PRESETS = [1, 2, 5, 10, 20];
 export const DEFAULT_PLAN = { mode: 'days', value: 30 };
@@ -37,7 +37,7 @@ export const daysBetween = (a, b) => {
   return Math.round((Date.UTC(y.getFullYear(), y.getMonth(), y.getDate()) - Date.UTC(x.getFullYear(), x.getMonth(), x.getDate())) / 864e5);
 };
 
-// التاريخ بالميلادي والهجري معًا (الهجري بتقويم أم القرى المدمج في المتصفح، بلا إنترنت)
+// التاريخ بالميلادي والهجري معا (الهجري بتقويم أم القرى المدمج في المتصفح، بلا إنترنت)
 const gregorian = new Intl.DateTimeFormat('ar-u-ca-gregory-nu-arab', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-arab', { day: 'numeric', month: 'long', year: 'numeric' });
 export function formatDates(key) {
@@ -49,10 +49,10 @@ export function formatDates(key) {
 }
 
 // ---------- تقسيم الأوراد ----------
-// يقسّم الصفحات من from إلى to أورادًا: [[أول صفحة، آخر صفحة], ...]
+// يقسم الصفحات من from إلى to أورادا: [[أول صفحة، آخر صفحة], ...]
 //  • بالأيام: عدد الأوراد هو عدد الأيام، والصفحات موزعة بالتساوي (يزيد بعضها صفحة على بعض)،
-//    فلا يبقى يوم أخير قصير جدًّا.
-//  • بالصفحات: كل ورد بالقدر المختار تمامًا، والورد الأخير ما بقي.
+//    فلا يبقى يوم أخير قصير جدا.
+//  • بالصفحات: كل ورد بالقدر المختار تماما، والورد الأخير ما بقي.
 export function splitWirds(from, to, mode, value) {
   const total = to - from + 1;
   if (total <= 0) return [];
@@ -110,10 +110,10 @@ function saveWird(k) {
   ختمة الورد المحفوظة:
     type 'wird' · created يوم الإنشاء
     mode 'days' | 'pages' · value عدد الأيام أو صفحات الورد
-    from أول صفحة في الخطة الحالية (تتغير عند تعديل الخطة إلى أول صفحة لم تُقرأ)
-    planStart يوم بداية الخطة الحالية · done الأوراد المتمَّة في الخطة الحالية
-    doneBefore الأوراد المتمَّة قبل آخر تعديل للخطة · lastDone آخر يوم أُتمّ فيه ورد
-    finished يوم الختم (إن خُتمت، وتبقى حتى «ابدأ ختمة جديدة» أو الحذف)
+    from أول صفحة في الخطة الحالية (تتغير عند تعديل الخطة إلى أول صفحة لم تقرأ)
+    planStart يوم بداية الخطة الحالية · done الأوراد المتمة في الخطة الحالية
+    doneBefore الأوراد المتمة قبل آخر تعديل للخطة · lastDone آخر يوم أتم فيه ورد
+    finished يوم الختم (إن ختمت، وتبقى حتى «ابدأ ختمة جديدة» أو الحذف)
 */
 export function startWird(mode, value, today = dayKey()) {
   const k = { type: 'wird', created: today, mode, value, from: FIRST_PAGE, planStart: today, done: 0, doneBefore: 0, lastDone: null, finished: null };
@@ -121,8 +121,8 @@ export function startWird(mode, value, today = dayKey()) {
   return k;
 }
 
-// تعديل الخطة أثناء الختمة: يُعاد التقسيم من أول صفحة لم تُقرأ، دون أن يضيع ما قُرئ. وإن كان ورد
-// اليوم قد أُتمّ بدأت الخطة الجديدة من الغد
+// تعديل الخطة أثناء الختمة: يعاد التقسيم من أول صفحة لم تقرأ، دون أن يضيع ما قرئ. وإن كان ورد
+// اليوم قد أتم بدأت الخطة الجديدة من الغد
 export function editWird(mode, value, today = dayKey()) {
   const k = readWird();
   if (!k || k.finished) return null;
@@ -140,7 +140,7 @@ export function editWird(mode, value, today = dayKey()) {
   return updated;
 }
 
-// إتمام الورد الحالي. والنتيجة: 'next' (بقي ورد) أو 'finished' (خُتم المصحف)
+// إتمام الورد الحالي. والنتيجة: 'next' (بقي ورد) أو 'finished' (ختم المصحف)
 export function completeWird(today = dayKey()) {
   const k = readWird();
   if (!k || k.finished) return null;
@@ -155,7 +155,7 @@ export function completeWird(today = dayKey()) {
 export const removeWird = () => saveWird(null);
 
 // ---------- حال الختمة ----------
-// كل ما تعرضه الواجهة عن الختمة في يوم معيّن
+// كل ما تعرضه الواجهة عن الختمة في يوم معين
 export function wirdState(k, today = dayKey()) {
   const wirds = splitWirds(k.from, LAST_PAGE, k.mode, k.value);
   const current = k.finished ? null : wirds[k.done] ?? null;
@@ -167,7 +167,7 @@ export function wirdState(k, today = dayKey()) {
   const day = daysBetween(k.planStart, today);
   const behind = Math.max(0, day - k.done);
   const ahead = Math.max(0, k.done - (day + 1));
-  // يوم الختم المتوقع بحسب ما بقي: ورد كل يوم من اليوم (أو من الغد إن أُتمّ ورد اليوم)
+  // يوم الختم المتوقع بحسب ما بقي: ورد كل يوم من اليوم (أو من الغد إن أتم ورد اليوم)
   const end = k.finished ?? addDays(today, doneToday ? remaining : remaining - 1);
   return {
     wirds,
@@ -185,12 +185,12 @@ export function wirdState(k, today = dayKey()) {
   };
 }
 
-// «يوم واحد» · «يومين» · «٣ أيام» · «١١ يومًا» (بأرقام عربية)
+// «يوم واحد» · «يومين» · «٣ أيام» · «١١ يوما» (بأرقام عربية)
 export function daysText(n, digits = (x) => x) {
   if (n === 1) return 'يوم واحد';
   if (n === 2) return 'يومين';
   if (n >= 3 && n <= 10) return `${digits(n)} أيام`;
-  return `${digits(n)} يومًا`;
+  return `${digits(n)} يوما`;
 }
 
 // «صفحة واحدة» · «صفحتين» · «٥ صفحات» · «٢٠ صفحة»
@@ -201,7 +201,7 @@ export function pagesText(n, digits = (x) => x) {
   return `${digits(n)} صفحة`;
 }
 
-// تتحدّث عند أي تغيير في الختمة
+// تتحدث عند أي تغيير في الختمة
 const snapshot = () => ({ wird: readWird(), doneCount: readDoneCount() });
 export function useKhatma() {
   const [data, setData] = useState(snapshot);
