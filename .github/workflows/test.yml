@@ -1,0 +1,44 @@
+# الفحص التلقائي: يبني التطبيق ويشغّل كل الاختبارات (الوحدات، والمتصفح، واللقطات المرجعية)
+# على كل Pull Request وكل رفع إلى main. فشل أي اختبار يُظهر ❌ على الطلب.
+name: الاختبارات
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: البناء والاختبارات
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: البناء
+        run: npm run build
+      - name: اختبارات الوحدات
+        run: npm run test:unit
+      - name: تثبيت متصفح الاختبارات
+        run: npx playwright install --with-deps chromium
+      - name: اختبارات المتصفح واللقطات المرجعية
+        run: npm run test:e2e
+      # عند الفشل: التقرير بلقطات الشاشة والفروق (الصورة المرجعية والجديدة والفرق بينهما)
+      - name: رفع تقرير الاختبارات
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

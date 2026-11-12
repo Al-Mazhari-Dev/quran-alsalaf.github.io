@@ -41,3 +41,7 @@ glyphs-test.html
 شعار حفظ القرآن بطريقة السلف.jpg
 لقطة شاشة *.png
 .claude/
+
+# مخرجات الاختبارات الآلية
+test-results/
+playwright-report/
