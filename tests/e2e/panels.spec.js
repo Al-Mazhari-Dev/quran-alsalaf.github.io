@@ -112,10 +112,10 @@ const ACCENTS = [
   ['أخضر زمردي', 'emerald'],
   ['ذهبي عنبري', 'amber'],
   ['عنّابي', 'maroon'],
-  ['موف', 'mauve'],
+  ['بلا لون', 'none'],
 ];
 
-test('خلفيات القراءة الأربع وألوان التطبيق الخمسة، وبقاء الاختيار بعد إعادة الفتح', async ({ page }) => {
+test('خلفيات القراءة الأربع وألوان التطبيق الأربعة و«بلا لون»، وبقاء الاختيار بعد إعادة الفتح', async ({ page }) => {
   await clickTopbar(page, 'الإعدادات');
   const bgGroup = settings(page).getByRole('radiogroup', { name: 'خلفية القراءة' });
   const accentGroup = settings(page).getByRole('radiogroup', { name: 'لون التطبيق' });
@@ -142,10 +142,10 @@ test('خلفيات القراءة الأربع وألوان التطبيق ال�
   await page.reload();
   await waitMushaf(page);
   await expect(root).toHaveAttribute('data-bg', 'black');
-  await expect(root).toHaveAttribute('data-accent', 'mauve');
+  await expect(root).toHaveAttribute('data-accent', 'none');
   await clickTopbar(page, 'الإعدادات');
   await expect(bgGroup.getByRole('radio', { name: 'أسود' })).toHaveAttribute('aria-checked', 'true');
-  await expect(accentGroup.getByRole('radio', { name: 'موف' })).toHaveAttribute('aria-checked', 'true');
+  await expect(accentGroup.getByRole('radio', { name: 'بلا لون' })).toHaveAttribute('aria-checked', 'true');
 });
 
 test('تمييز مقررات الأسابيع يُفعَّل ويُحفظ', async ({ page }) => {

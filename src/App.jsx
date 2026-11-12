@@ -55,6 +55,8 @@ export default function App() {
   // إخفات ما خارجه في المصحف). وكلاهما إن لم يكتمل فالمعتمد آيات الصفحة الظاهرة، أو الصفحتين
   // الظاهرتين معًا من أول اليمنى إلى آخر اليسرى
   const selection = user.range?.length === 2 ? user.range : null;
+  // مقدار استماع ببداية بلا نهاية (٢٠٢٦-١١-١٢): يبدأ من آيته متتابعًا إلى آخر المصحف
+  const listenStart = user.range?.length === 1 ? user.range[0] : null;
   const contentSel = user.contentRange?.length === 2 ? user.contentRange : null;
   const shownVerses = useMemo(
     () => (quran ? [...new Set(shownPages.flatMap((p) => pageVerses(quran, p)))] : []),
@@ -89,18 +91,28 @@ export default function App() {
   // للمقدار. والتنزيل بلا مقدار يبقى للصفحة أو الصفحتين الظاهرتين (range)
   const player = usePlayer();
   const [listenOpen, setListenOpen] = useState(false);
-  const listenSuras = useMemo(() => (quran ? [...new Set(range.map((v) => quran.verses[v].s))] : []), [quran, range]);
+  // ما يُنزَّل للاستماع بلا إنترنت: المقدار المحدد، أو من آية البداية إلى آخر صفحتها إن حُددت البداية
+  // وحدها، وإلا الصفحة أو الصفحتان الظاهرتان
+  const listenVerses = useMemo(
+    () => (quran && !selection && listenStart != null ? pageVerses(quran, quran.verses[listenStart].p).filter((v) => v >= listenStart) : range),
+    [quran, selection, listenStart, range]
+  );
+  const listenSuras = useMemo(() => (quran ? [...new Set(listenVerses.map((v) => quran.verses[v].s))] : []), [quran, listenVerses]);
   const listenLabel =
     quran &&
     (selection
       ? verseLabel(quran, selection)
-      : spread
+      : listenStart != null
+        ? `من ${verseLabel(quran, [listenStart])} إلى آخر المصحف`
+        : spread
         ? `من الصفحتين ${toArabicDigits(shownPages[0])}–${toArabicDigits(shownPages[1])} متتابعًا`
         : `من الصفحة ${toArabicDigits(page)} متتابعًا`);
-  // ما يُشغَّل: المقدار المحدد، وإلا من أول الآيات الظاهرة إلى آخر المصحف
+  // ما يُشغَّل: المقدار المحدد؛ وإلا من آية البداية إن حُددت وحدها، أو من أول الآيات الظاهرة، إلى آخر المصحف
+  const playFrom = listenStart ?? shownVerses[0];
   const playVerses = () =>
-    selection ? range : Array.from({ length: quran.verses.length - shownVerses[0] }, (_, i) => shownVerses[0] + i);
-  // مقدار الاستماع الذي بدأ به التشغيل الجاري: إن عُدِّل أثناءه طُبِّق عند إغلاق نافذة الاستماع («تم»)
+    selection ? range : Array.from({ length: quran.verses.length - playFrom }, (_, i) => playFrom + i);
+  // مقدار الاستماع الذي بدأ به التشغيل الجاري (كما حُفظ: بداية ونهاية، أو بداية وحدها): إن عُدِّل أثناءه
+  // طُبِّق عند إغلاق نافذة الاستماع («تم»)
   const playedSel = useRef(null);
   const sameSel = (a, b) => a?.[0] === b?.[0] && a?.[1] === b?.[1];
   // نقل المصحف إلى صفحة آية إن لم تكن ظاهرة: صفحتها في عرض الصفحة الواحدة، وزوجها في عرض الصفحتين
@@ -110,10 +122,11 @@ export default function App() {
     if (!shownPages.includes(p)) setGotoPage({ page: p, n: Date.now() });
   };
   const startListening = () => {
-    playedSel.current = selection;
+    playedSel.current = user.range;
     // الانتقال إلى بداية المقدار (٢٠٢٦-١١-١١): من أول ضغطة تشغيل، قبل أن يبدأ الصوت، ينتقل المصحف إلى
-    // صفحة أول آية في مقدار الاستماع إن كان بعيدًا عن الظاهر. وبلا مقدار يبدأ من الظاهر فلا انتقال
-    if (selection) showVerse(selection[0]);
+    // صفحة أول آية في مقدار الاستماع إن كان بعيدًا عن الظاهر — ومثله البداية وحدها. وبلا مقدار يبدأ من
+    // الظاهر فلا انتقال
+    if (user.range?.length) showVerse(user.range[0]);
     // play() ترجع 'unsupported' أو 'playing' (src/lib/player.js)، ونافذة الاستماع تبقى مفتوحة كما كانت
     if (play(quran, playVerses(), !selection) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
     // أخطاء التشغيل نفسه تظهر من التأثير أدناه (player.error)
@@ -122,8 +135,8 @@ export default function App() {
   // أوله بعدّاد تكرار جديد؛ وداخله ⇐ يكمل من حيث هو وينتهي عند النهاية الجديدة (retarget)
   const closeListen = () => {
     setListenOpen(false);
-    if (player.status === 'idle' || sameSel(selection, playedSel.current)) return;
-    playedSel.current = selection;
+    if (player.status === 'idle' || sameSel(user.range, playedSel.current)) return;
+    playedSel.current = user.range;
     if (retarget(quran, playVerses(), !selection) === 'unsupported') showToast('تسجيل هذا القارئ لا يشمل هذا الموضع؛ اختر قارئًا آخر.');
   };
   useEffect(() => {
@@ -295,7 +308,7 @@ export default function App() {
         if (Math.hypot(e.clientX - quiet.current.x, e.clientY - quiet.current.y) < 24) return;
         quiet.current = null;
       }
-      overChrome.current = !!e.target.closest?.('.topbar__icon, .topbar__search, .dock__slot, .reader__arrow');
+      overChrome.current = !!e.target.closest?.('.topbar__icon, .topbar__search, .dock__slot, .dock__clear, .reader__arrow');
       setMouseUi(true);
       setChromeOpen(true);
       scheduleHide();
@@ -496,9 +509,23 @@ export default function App() {
                 </button>
               </div>
             )}
-            <button className="dock__slot" type="button" disabled={!quran} onClick={openStudy}>
-              <span className="dock__label">صفحات المحتوى</span>
-            </button>
+            {/* صفحات المحتوى، وفيها ✕ صغير ما دام لها مقدار (٢٠٢٦-١١-١٢): يلغيه فورًا ويزيل الإخفات دون أن
+                يفتحها. وهو زرّ مستقل فوق طرف الخانة (لا داخل زرّها)، بمساحة لمس كاملة الارتفاع لا تتداخل مع
+                مساحة فتحها، ويُفسح له الزرّ مكانه فيبقى اسمه في وسط ما بقي */}
+            <div className={`dock__study${user.contentRange?.length ? ' dock__study--range' : ''}`}>
+              <button className="dock__slot" type="button" disabled={!quran} onClick={openStudy}>
+                <span className="dock__label">صفحات المحتوى</span>
+              </button>
+              {quran && user.contentRange?.length > 0 && (
+                <button type="button" className="dock__clear" onClick={() => saveContentRange(null)} aria-label="إلغاء مقدار المحتوى" title="إلغاء المقدار">
+                  <span>
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M7 7l10 10M17 7 7 17" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                </button>
+              )}
+            </div>
           </footer>
         )}
       </div>
@@ -538,7 +565,7 @@ export default function App() {
       {quran && listenOpen && (
         <ListenSheet
           quran={quran}
-          verses={range}
+          verses={listenVerses}
           continuous={!selection}
           label={listenLabel}
           suras={listenSuras}

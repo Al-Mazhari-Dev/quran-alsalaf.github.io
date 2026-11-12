@@ -70,7 +70,12 @@ export default function SettingsSheet({ open, panel, page = 'main', onPage, onCl
               <SwatchRow
                 label="لون التطبيق"
                 value={look.accent}
-                options={ACCENTS.map((a) => ({ value: a.id, label: a.name, color: darkBg ? a.dark : a.light }))}
+                options={ACCENTS.map((a) =>
+                  // «بلا لون»: دائرة نصفها فاتح ونصفها غامق تميّزه عن الألوان، والصح فوقها بلون يعاكس ما تحته
+                  a.ink
+                    ? { value: a.id, label: a.name, color: 'linear-gradient(135deg, #fff 50%, #2b2b2e 50%)', split: true }
+                    : { value: a.id, label: a.name, color: darkBg ? a.dark : a.light }
+                )}
                 onChange={chooseAccent}
               />
             </Section>
@@ -150,7 +155,7 @@ function SwatchRow({ label, value, options, onChange }) {
             type="button"
             role="radio"
             aria-checked={value === o.value}
-            className="swatch"
+            className={`swatch${o.split ? ' swatch--split' : ''}`}
             aria-label={o.label}
             title={o.label}
             onClick={() => onChange(o.value)}

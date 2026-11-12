@@ -32,6 +32,7 @@
 
         • أول فتح: خلفية «رصاصي» إن كان الجهاز على الوضع الداكن، وإلا «بيج»؛ واللون «أزرق».
         • من اختار سابقًا الوضع الداكن (hq.theme) ينتقل إلى «رصاصي»، والفاتح إلى «بيج».
+        • من اختار «موف» (أُزيل) ينتقل إلى «بلا لون».
         • بعدها يبقى اختيار المستخدم هو المعتمد ولو تغيّر إعداد النظام.
         وsrc/lib/appearance.js يستعمل apply نفسها عند التبديل من الإعدادات.
       */
@@ -78,10 +79,17 @@
         function apply(bgId, accentId) {
           var bg = find(DATA.backgrounds, bgId) || find(DATA.backgrounds, DATA.defaults.light);
           var accent = find(DATA.accents, accentId) || find(DATA.accents, DATA.defaults.accent);
-          var k = DATA.mix[bg.dark ? 'dark' : 'light'];
+          var theme = bg.dark ? 'dark' : 'light';
+          // مقادير الاشتقاق، وللّون أن يعدّل بعضها لنفسه («بلا لون»: تظليل رمادي أخفّ من الملوَّن،
+          // لأن لون نص المصحف أشد تباينًا مع الخلفية من أي لون، فيبقى نص الآية الجارية مقروءًا فوقه)
+          var k = {};
+          for (var m in DATA.mix[theme]) k[m] = DATA.mix[theme][m];
+          if (accent.mix && accent.mix[theme]) for (var o in accent.mix[theme]) k[o] = accent.mix[theme][o];
           var root = document.documentElement;
-          var accentHex = bg.dark ? accent.dark : accent.light;
-          root.setAttribute('data-theme', bg.dark ? 'dark' : 'light');
+          // «بلا لون» (ink): اللون الثانوي هو لون نص المصحف لتلك الخلفية — غامق على الفاتحتين وفاتح على
+          // الداكنتين — فيصير التطبيق أحادي اللون
+          var accentHex = accent.ink ? bg.ink : bg.dark ? accent.dark : accent.light;
+          root.setAttribute('data-theme', theme);
           root.setAttribute('data-bg', bg.id);
           root.setAttribute('data-accent', accent.id);
           root.style.setProperty('--bg', bg.bg);
@@ -142,6 +150,11 @@
           try { localStorage.removeItem('hq.theme'); } catch (e) {}
         }
         var accentId = get(ACCENT_KEY);
+        // لون أُزيل وحلّ محله غيره («موف» ⇐ «بلا لون»، ٢٠٢٦-١١-١٢): ينتقل صاحبه إليه تلقائيًا
+        if (DATA.replaced && DATA.replaced[accentId]) {
+          accentId = DATA.replaced[accentId];
+          set(ACCENT_KEY, accentId);
+        }
         if (!find(DATA.accents, accentId)) {
           accentId = DATA.defaults.accent;
           set(ACCENT_KEY, accentId);

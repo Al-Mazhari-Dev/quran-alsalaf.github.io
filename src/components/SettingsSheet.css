@@ -261,6 +261,15 @@
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.22), 0 0 0 0 var(--accent);
 }
 
+/* «بلا لون»: نصف أبيض ونصف غامق، والصح أبيض بمزج «الفرق» فيظهر غامقًا على النصف الفاتح وفاتحًا على الغامق */
+.swatch--split .swatch__dot {
+  color: #fff;
+}
+
+.swatch--split .swatch__dot svg {
+  mix-blend-mode: difference;
+}
+
 .swatch__dot svg {
   width: 20px;
   height: 20px;

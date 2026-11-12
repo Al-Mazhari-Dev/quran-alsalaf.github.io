@@ -2,7 +2,7 @@
 // أي تغيير شكلي غير مقصود يُفشل المقارنة في GitHub. وتحديثها عن قصد: التزام فيه [update-snapshots] (snapshots.yml)
 // (وبحسب CLAUDE.md: تُعرض الصورة القديمة والجديدة على صاحب المشروع قبل اعتماد التحديث)
 import { test, expect } from '@playwright/test';
-import { clickDock, clickTopbar, openApp } from './helpers.js';
+import { clickDock, clickTopbar, openApp, showChrome } from './helpers.js';
 
 const THEMES = [
   ['light', 'beige'],
@@ -41,5 +41,14 @@ for (const [theme, bg] of THEMES) {
       await settle(page);
       await expect(page).toHaveScreenshot(`settings-${theme}.png`);
     });
+  });
+
+  // «بلا لون» (٢٠٢٦-١١-١٢) ومعه مقدار صفحات المحتوى: الإخفات، وزرّا الشريط السفلي ظاهران و✕ الإلغاء في زر صفحات المحتوى
+  test(`بلا لون ${theme}`, async ({ page }) => {
+    await openApp(page, { 'hq.page': '3', 'hq.bg': bg, 'hq.accent': 'none', 'hq.contentRange': [12, 16] });
+    await page.evaluate(() => document.fonts.ready);
+    await showChrome(page);
+    await page.waitForTimeout(400);
+    await expect(page).toHaveScreenshot(`none-${theme}.png`);
   });
 }
