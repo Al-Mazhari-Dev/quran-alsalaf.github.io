@@ -375,3 +375,98 @@ test('منتقي الآية: السور مطوية، والسهم يفتح آي�
   await expect(endPicker.locator('.rpick__verse').first().locator('.rpick__num')).toHaveText('٣');
   await expect(endPicker.locator('.rpick__verse')).toHaveCount(5);
 });
+
+// معاينة صوت القارئ (٢٠٢٦-١١-١٣): زرّ أمام كل قارئ يُسمِع الفاتحة ٢ بصوته، ولا يختاره ولا يغلق القائمة
+test.describe('معاينة صوت القارئ', () => {
+  const picker = (page) => page.getByRole('dialog', { name: 'اختر القارئ' });
+  const openPicker = async (page) => {
+    await listen(page).getByRole('button', { name: /القارئ/ }).click();
+    await expect(picker(page)).toBeVisible();
+  };
+  // عنصر صوت المعاينة: آخر عنصر أُسند إليه رابط الفاتحة ٢
+  const previewPlaying = (page) =>
+    page.evaluate(() => window.__audio.els.filter((e) => /001002\.mp3$/.test(e.src)).some((e) => e.__mockPlaying));
+
+  test('زرّ معاينة أمام كل قارئ، يُسمِع الفاتحة ٢ دون اختياره ولا إغلاق القائمة', async ({ page }) => {
+    await openApp(page, { 'hq.page': '3' });
+    await clickDock(page, 'الاستماع للآيات');
+    await openPicker(page);
+    const radios = picker(page).getByRole('radio');
+    const count = await radios.count();
+    expect(count).toBeGreaterThanOrEqual(34);
+    await expect(picker(page).getByRole('button', { name: /^معاينة صوت / })).toHaveCount(count);
+
+    await picker(page).getByRole('button', { name: 'معاينة صوت ماهر المعيقلي' }).click();
+    expect(await lastSrc(page)).toMatch(/MaherAlMuaiqly128kbps\/001002\.mp3$/);
+    await expect(picker(page).getByRole('button', { name: 'إيقاف المعاينة' })).toHaveCount(1);
+    expect(await previewPlaying(page)).toBe(true);
+    // القائمة باقية، والقارئ المختار لم يتغير
+    await expect(picker(page)).toBeVisible();
+    await expect(picker(page).getByRole('radio', { name: 'سعود الشريم' })).toHaveAttribute('aria-checked', 'true');
+    await expect(picker(page).getByRole('radio', { name: 'ماهر المعيقلي' })).toHaveAttribute('aria-checked', 'false');
+    expect(await stored(page, 'hq.listen')).toBeNull();
+
+    // معاينة قارئ آخر توقف الأولى: زرّ إيقاف واحد فقط
+    await picker(page).getByRole('button', { name: 'معاينة صوت محمود خليل الحصري', exact: true }).click();
+    expect(await lastSrc(page)).toMatch(/Husary.*\/001002\.mp3$/);
+    await expect(picker(page).getByRole('button', { name: 'إيقاف المعاينة' })).toHaveCount(1);
+    await expect(picker(page).getByRole('button', { name: 'معاينة صوت ماهر المعيقلي' })).toBeVisible();
+
+    // الضغط مرة ثانية يوقفها
+    await picker(page).getByRole('button', { name: 'إيقاف المعاينة' }).click();
+    await expect(picker(page).getByRole('button', { name: 'إيقاف المعاينة' })).toHaveCount(0);
+    expect(await previewPlaying(page)).toBe(false);
+  });
+
+  test('تنتهي المعاينة وحدها بانتهاء الآية، وإغلاق القائمة يوقفها', async ({ page }) => {
+    await openApp(page, { 'hq.page': '3' });
+    await clickDock(page, 'الاستماع للآيات');
+    await openPicker(page);
+    await picker(page).getByRole('button', { name: 'معاينة صوت ماهر المعيقلي' }).click();
+    await expect(picker(page).getByRole('button', { name: 'إيقاف المعاينة' })).toBeVisible();
+    await end(page);
+    await expect(picker(page).getByRole('button', { name: 'إيقاف المعاينة' })).toHaveCount(0);
+
+    await picker(page).getByRole('button', { name: 'معاينة صوت ماهر المعيقلي' }).click();
+    expect(await previewPlaying(page)).toBe(true);
+    await picker(page).getByRole('button', { name: 'إغلاق' }).click();
+    await expect(picker(page)).toHaveCount(0);
+    expect(await previewPlaying(page)).toBe(false);
+  });
+
+  test('توقف التلاوة الجارية مؤقتًا، وتُستأنف بعد المعاينة؛ واختيار قارئ بعدها يعمل كالمعتاد', async ({ page }) => {
+    await openApp(page, { 'hq.page': '3' });
+    await clickDock(page, 'الاستماع للآيات');
+    await listen(page).getByRole('button', { name: 'تشغيل' }).click();
+    const first = pageVerses(3)[0];
+    await expect(word(page, first)).toHaveClass(/w--playing/);
+    const mainPlaying = () => page.evaluate(() => window.__audio.els[0].__mockPlaying);
+    expect(await mainPlaying()).toBe(true);
+
+    await openPicker(page);
+    await picker(page).getByRole('button', { name: 'معاينة صوت ماهر المعيقلي' }).click();
+    expect(await mainPlaying()).toBe(false);
+    await picker(page).getByRole('button', { name: 'إيقاف المعاينة' }).click();
+    expect(await mainPlaying()).toBe(true);
+    await expect(word(page, first)).toHaveClass(/w--playing/);
+
+    // معاينة ثم اختيار قارئ: تتوقف المعاينة وتُعاد الآية الجارية بصوت القارئ المختار
+    await picker(page).getByRole('button', { name: 'معاينة صوت محمود خليل الحصري', exact: true }).click();
+    await picker(page).getByRole('radio', { name: 'ماهر المعيقلي' }).click();
+    await expect(picker(page)).toHaveCount(0);
+    expect(await previewPlaying(page)).toBe(false);
+    expect(await page.evaluate(() => window.__audio.els[0].src)).toMatch(/MaherAlMuaiqly128kbps\/002006\.mp3$/);
+    expect(await mainPlaying()).toBe(true);
+  });
+
+  test('إن تعذّر تشغيل المعاينة تظهر رسالة ويرجع الزر', async ({ page }) => {
+    await openApp(page, { 'hq.page': '3' });
+    await clickDock(page, 'الاستماع للآيات');
+    await openPicker(page);
+    await picker(page).getByRole('button', { name: 'معاينة صوت ماهر المعيقلي' }).click();
+    await page.evaluate(() => window.__audio.current().dispatchEvent(new Event('error')));
+    await expect(page.getByRole('status')).toHaveText('تعذّر تشغيل المعاينة');
+    await expect(picker(page).getByRole('button', { name: 'إيقاف المعاينة' })).toHaveCount(0);
+    await expect(picker(page).getByRole('button', { name: 'معاينة صوت ماهر المعيقلي' })).toBeVisible();
+  });
+});

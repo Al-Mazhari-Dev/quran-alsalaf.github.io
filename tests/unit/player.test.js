@@ -199,3 +199,83 @@ describe('تغيير القارئ والتحكم', () => {
     expect(FakeAudio.srcs.length).toBe(n);
   });
 });
+
+// معاينة صوت القارئ (٢٠٢٦-١١-١٣): الفاتحة ٢ بعنصر صوت مستقل، لا تغيّر القارئ المختار،
+// وتوقف التلاوة مؤقتًا ثم تستأنفها
+describe('معاينة صوت القارئ', () => {
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  it('تُسمِع الفاتحة ٢ بصوت القارئ ولا تغيّر القارئ المختار ولا الإعدادات', () => {
+    P.previewReciter('muaiqly');
+    const el = FakeAudio.last;
+    expect(file(el.src)).toBe('MaherAlMuaiqly128kbps/001002');
+    expect(P.playerState().preview).toEqual({ id: 'muaiqly', status: 'loading' });
+    el.dispatchEvent(new Event('playing'));
+    expect(P.playerState().preview.status).toBe('playing');
+    expect(P.playerState().settings.reciter).toBe('shuraym');
+    expect(localStorage.getItem('hq.listen')).toBeNull();
+    el.dispatchEvent(new Event('ended'));
+    expect(P.playerState().preview).toBeNull();
+    expect(el.paused).toBe(true);
+  });
+
+  it('معاينة واحدة في كل مرة: الثانية تحل محل الأولى بالعنصر نفسه', () => {
+    P.previewReciter('muaiqly');
+    const el = FakeAudio.last;
+    P.previewReciter('husary');
+    expect(FakeAudio.last).toBe(el);
+    expect(el.src).toMatch(/Husary.*\/001002\.mp3$/);
+    expect(P.playerState().preview.id).toBe('husary');
+    P.stopPreview();
+    expect(P.playerState().preview).toBeNull();
+  });
+
+  it('توقف التلاوة الجارية مؤقتًا، وتستأنفها من حيث وقفت عند انتهائها', () => {
+    P.play(q, [idx(1, 2), idx(1, 3)]);
+    const main = FakeAudio.last;
+    const src = main.src;
+    P.previewReciter('muaiqly');
+    expect(main.paused).toBe(true);
+    expect(P.playerState().status).toBe('paused');
+    FakeAudio.last.dispatchEvent(new Event('ended'));
+    expect(main.paused).toBe(false);
+    expect(main.src).toBe(src);
+    expect(P.playerState().v).toBe(idx(1, 2));
+  });
+
+  it('وتستأنفها كذلك عند إيقاف المعاينة، ولا تستأنف ما أوقفه المستخدم بنفسه', () => {
+    P.play(q, [idx(1, 2)]);
+    const main = FakeAudio.last;
+    P.previewReciter('muaiqly');
+    P.previewReciter('husary'); // التبديل بين معاينتين لا يستأنف التلاوة بينهما
+    expect(main.paused).toBe(true);
+    P.stopPreview();
+    expect(main.paused).toBe(false);
+
+    P.pause();
+    P.previewReciter('muaiqly');
+    P.stopPreview();
+    expect(main.paused).toBe(true);
+    expect(P.playerState().status).toBe('paused');
+  });
+
+  it('إن تعذّر التشغيل: تُبلَّغ الواجهة وتنتهي المعاينة وتُستأنف التلاوة', async () => {
+    P.play(q, [idx(1, 2)]);
+    const main = FakeAudio.last;
+    const onFail = vi.fn();
+    P.previewReciter('muaiqly', onFail);
+    FakeAudio.last.dispatchEvent(new Event('error'));
+    expect(onFail).toHaveBeenCalledTimes(1);
+    expect(P.playerState().preview).toBeNull();
+    expect(main.paused).toBe(false);
+
+    // ورفض play() نفسه (لا AbortError)
+    const fail2 = vi.fn();
+    const el = FakeAudio.last;
+    el.play = () => Promise.reject(new Error('net'));
+    P.previewReciter('husary', fail2);
+    await flush();
+    expect(fail2).toHaveBeenCalledTimes(1);
+    expect(P.playerState().preview).toBeNull();
+  });
+});
