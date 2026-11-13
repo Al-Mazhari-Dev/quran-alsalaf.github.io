@@ -2,6 +2,7 @@ import { memo, useEffect, useRef } from 'react';
 import { pageFontClass } from '../lib/qcfFonts.js';
 import { weekMap } from '../lib/weeks.js';
 import { BOOKMARK_COLORS } from '../lib/userdata.js';
+import { rubStarts } from '../lib/rubs.js';
 import './MushafPage.css';
 
 // الفاتحة وأول البقرة (بلا زخرفة، بقرار صاحب المشروع): الأسطر السبعة (البسملة منها في
@@ -21,7 +22,8 @@ const OPENING_HEADER_ROW = OPENING_TEXT_ROW - 1;
 // marks: ما يُرسم فوق الآيات من بيانات المستخدم —
 //   notes { آية: نص }، bookmarks [{ v, color }]، range [أول، آخر] (يُخفت ما خارجه)،
 //   selected الآية المضغوط عليها ضغطًا مطوّلًا، playing الآية الجاري تلاوتها،
-//   flash الآية المنتقَل إليها من البحث (تمييز مؤقت يتلاشى)
+//   flash الآية المنتقَل إليها من البحث (تمييز مؤقت يتلاشى)،
+//   rubFlash { verses: [أول آية في كل ربع], n } الأرباع التي يومض موضع بدايتها (src/lib/rubs.js)
 function MushafPage({ quran, page, fontSize, width, height, shortLines, marks }) {
   const lines = quran.pages[page - 1];
   const glyphs = quran.qcf.pages[page - 1];
@@ -84,9 +86,12 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
   // اسم السورة في إطاره المعروف: رمز واحد من خط عناوين السور للمجمع، بعرض العمود
   if (line.h) {
     const size = (width * (opening ? 0.78 : 0.98)) / quran.qcf.headerEm;
+    // ربع يبدأ بأول السورة: لا ۞ قبله في المطبوع، فيومض إطار اسمها بدلها
+    const rubFlash = marks?.rubFlash?.verses.some((v) => quran.verses[v].s === line.h && quran.verses[v].a === 1);
     return (
       <div
-        className="line line--sura"
+        key={rubFlash ? `f${marks.rubFlash.n}` : 'h'}
+        className={`line line--sura${rubFlash ? ' line--rubflash' : ''}`}
         style={{ ...place, fontSize: `${size}px` }}
         role="heading"
         aria-level={2}
@@ -111,7 +116,14 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
   // الآيات التي تنتهي في هذا السطر: آخر رمز لها فيه علامتها، وعندها تُرسم إشارتا الملاحظة والعلامة
   const endsHere = new Set(line.g.filter(([v, , to]) => to === quran.verses[v].t.length - 1).map(([v]) => v));
   const lastIndexOf = new Map();
-  glyphs.k.forEach(([v], i) => lastIndexOf.set(v, i));
+  const firstIndexOf = new Map();
+  glyphs.k.forEach(([v], i) => {
+    lastIndexOf.set(v, i);
+    if (!firstIndexOf.has(v)) firstIndexOf.set(v, i);
+  });
+  const rubs = rubStarts(quran);
+  // الآيات التي تبدأ في هذا السطر (أول كلمة فيها عليه): عند أولها تُرسم علامة الربع
+  const startsHere = new Set(line.g.filter(([, from]) => from === 0).map(([v]) => v));
   return (
     <div
       className={`line ${pageFontClass(page)}${centered ? ' line--centered' : ''}`}
@@ -132,6 +144,24 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
         // الآية ذات العلامة أو الملاحظة (بطلب صاحب المشروع): علامة الآية ورقمها كما هما؛
         // الملاحظة دفتر ملاحظات صغير أعلى الدائرة يمينًا، والعلامة رمز شريطتها بلونها أعلاها يسارًا
         const marked = bookmark !== undefined || note;
+        // أول كلمة في الربع: علامة ۞ رمز مستقل أول رموزها في خط الصفحة (٢٠٢٦-١١-١٣)، فتُفصل عنها
+        // لتومض وحدها بلون التطبيق عند الوصول إلى الصفحة
+        const rub = rubs.has(v) && startsHere.has(v) && firstIndexOf.get(v) === i && quran.verses[v].t[0] === '۞';
+        if (rub) {
+          const flashing = marks?.rubFlash?.verses.includes(v);
+          const mark = code.slice(0, 1);
+          return (
+            <span key={i} className={cls} data-v={v} aria-hidden="true">
+              <span>
+                <span key={flashing ? `f${marks.rubFlash.n}` : 'r'} className={`w__rub${flashing ? ' w__rub--flash' : ''}`}>
+                  {mark}
+                  {flashing && <span className="w__rubFlash">{mark}</span>}
+                </span>
+                {code.slice(1)}
+              </span>
+            </span>
+          );
+        }
         return (
           <span key={i} className={cls} data-v={v} aria-hidden="true">
             {marked ? (

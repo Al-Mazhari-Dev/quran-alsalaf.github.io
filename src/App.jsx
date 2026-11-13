@@ -20,6 +20,7 @@ import { pageVerses, verseLabel } from './lib/study.js';
 import { saveContentRange, saveRange, useUserData } from './lib/userdata.js';
 import { spreadStart } from './lib/layout.js';
 import { hasOpenLayer } from './lib/layers.js';
+import { useRubAlert } from './lib/rubs.js';
 import './App.css';
 
 // أقصر مدّة تبقى فيها شاشة الافتتاح ولو كانت البيانات جاهزة فورًا من ذاكرة
@@ -191,9 +192,17 @@ export default function App() {
   // الإخفات (٢٠٢٦-١١-١١): يتبع مقدار صفحات المحتوى وحده، فيُخفت في المصحف ما خارجه ويزول بإلغائه،
   // ولو أثناء الاستماع. ومقدار الاستماع لا يُخفت شيئًا؛ والآية الجارية مظلَّلة، وإن كانت خارج مقدار
   // صفحات المحتوى بقي نصّها شفافًا وتظليلها خلفه (MushafPage.css)
+  // التنبيه عند الوصول إلى صفحة فيها بداية ربع (٢٠٢٦-١١-١٣): رسالة بنوعه ووميض علامته. ولا تنبيه عند
+  // أول فتح للتطبيق، ولا في وضع القراءة، ولا والمصحف خلف صفحات المحتوى أو صفحة الورد (src/lib/rubs.js)
+  const rubFlash = useRubAlert({
+    quran,
+    pages: shownPages,
+    enabled: !!quran && splashDone && !reading && !studyOpen && !khatmaOpen,
+    onToast: showToast,
+  });
   const marks = useMemo(
-    () => ({ notes: user.notes, bookmarks: user.bookmarks, range: contentSel, selected: pressed?.v ?? null, playing: player.v, flash: flash?.v ?? null }),
-    [user.notes, user.bookmarks, contentSel?.[0], contentSel?.[1], pressed?.v, player.v, flash?.v]
+    () => ({ notes: user.notes, bookmarks: user.bookmarks, range: contentSel, selected: pressed?.v ?? null, playing: player.v, flash: flash?.v ?? null, rubFlash }),
+    [user.notes, user.bookmarks, contentSel?.[0], contentSel?.[1], pressed?.v, player.v, flash?.v, rubFlash]
   );
 
   // دخول وضع القراءة من الإعدادات: يُوقَف الصوت بهدوء (الاستماع وتحديد المقدار لا يعملان فيه)،
@@ -210,8 +219,9 @@ export default function App() {
     setGotoPage({ page: p, n: Date.now() });
     setReading(false);
   };
-  const readingMarks = useMemo(() => ({ ...marks, range: null, playing: null }), [marks]);
-  const khatmaMarks = useMemo(() => ({ ...marks, range: null, playing: null, flash: null }), [marks]);
+  const readingMarks = useMemo(() => ({ ...marks, range: null, playing: null, rubFlash: null }), [marks]);
+  // صفحة الورد تنبّه ببداية الربع وحدها (KhatmaPage)
+  const khatmaMarks = useMemo(() => ({ ...marks, range: null, playing: null, flash: null, rubFlash: null }), [marks]);
 
   const onLongPress = useCallback((v, rect) => {
     setChromeOpen(false);
@@ -645,6 +655,7 @@ export default function App() {
           onClose={closeKhatma}
           onComplete={finishWird}
           onLongPress={onLongPress}
+          onToast={showToast}
           marks={khatmaMarks}
         />
       )}
