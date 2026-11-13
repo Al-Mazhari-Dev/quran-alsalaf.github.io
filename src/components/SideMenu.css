@@ -140,7 +140,7 @@
   color: var(--ink-muted);
 }
 
-.sidemenu__index button[aria-selected='true'] {
+.sidemenu__index button[aria-checked='true'] {
   background: var(--accent);
   color: var(--accent-ink);
   font-weight: 600;

@@ -92,9 +92,9 @@ export default function SideMenu({ quran, open, onGoto, onClose, onReadWird, onT
 
           {tab === 'suras' && (
             <>
-              <div className="sidemenu__index" role="tablist" aria-label="الفهرس">
+              <div className="sidemenu__index" role="radiogroup" aria-label="الفهرس">
                 {INDEXES.map((x) => (
-                  <button key={x.id} type="button" role="tab" aria-selected={index === x.id} onClick={() => pickIndex(x.id)}>
+                  <button key={x.id} type="button" role="radio" aria-checked={index === x.id} onClick={() => pickIndex(x.id)}>
                     {x.name}
                   </button>
                 ))}

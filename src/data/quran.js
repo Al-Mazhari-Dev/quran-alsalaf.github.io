@@ -8,6 +8,7 @@
 //              { b: رقم السورة }  بسملة
 //              { g: [[رقم الآية في المصحف، أول كلمة، آخر كلمة], ...] }  أسطر الآيات
 //   rubs   — أول آية في كل ربع من أرباع الأحزاب الـ٢٤٠ بالترتيب (يضيفه scripts/data/08-rubs.mjs)
+//   juzHeaders — { صفحة: جزء } الصفحتان اللتان تذكر ترويستهما في المطبوع جزءًا يبدأ فيهما (٦٢ و٥٠٢)
 //
 // ويُضاف إليه qcf (يبنيه scripts/data/05-qcf4.mjs) — رسم الصفحات بخطوط صفحات المجمع:
 //   widest   — أعرض سطر في المصحف بوحدة em (عليه يُضبط حجم الخط الواحد)
@@ -53,12 +54,12 @@ const JUZ = [
 ];
 export const juzName = (j) => `الجزء ${JUZ[j - 1]}`;
 
-// ما يُكتب في ترويسة الصفحة: السورة التي تبدأ بها الصفحة، وجزؤها.
-// وأجزاء مصحف المدينة كلها تبدأ في أول صفحة، فجزء أول آية هو جزء الصفحة.
+// ما يُكتب في ترويسة الصفحة: السورة التي تبدأ بها الصفحة، وجزؤها كما في المطبوع: جزء أول آية فيها،
+// إلا صفحتين تذكر ترويستهما الجزء الذي يبدأ فيهما (juzHeaders، scripts/data/08-rubs.mjs).
 export function pageInfo(quran, page) {
   const lines = quran.pages[page - 1];
   const first = lines[0];
   const firstVerse = lines.find((l) => l.g).g[0][0];
   const sura = first.h ?? first.b ?? quran.verses[firstVerse].s;
-  return { sura: quran.suras[sura - 1], juz: quran.verses[firstVerse].j };
+  return { sura: quran.suras[sura - 1], juz: quran.juzHeaders?.[page] ?? quran.verses[firstVerse].j };
 }

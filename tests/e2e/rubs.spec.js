@@ -65,9 +65,9 @@ test('لا تنبيه عند فتح التطبيق على صفحة فيها بد
 test('تبويب السور: شريط «السور · الأجزاء · الأرباع» يُفتح على السور، والأجزاء ٣٠ تنقل إلى بدايتها', async ({ page }) => {
   await openApp(page, { 'hq.page': '300' });
   await clickTopbar(page, 'القائمة');
-  const index = side(page).locator('.sidemenu__index').getByRole('tab');
+  const index = side(page).locator('.sidemenu__index').getByRole('radio');
   await expect(index).toHaveText(['السور', 'الأجزاء', 'الأرباع']);
-  await expect(index.first()).toHaveAttribute('aria-selected', 'true');
+  await expect(index.first()).toHaveAttribute('aria-checked', 'true');
   await expect(side(page).locator('.sidemenu__suras > li')).toHaveCount(114);
 
   await index.nth(1).click();
@@ -82,13 +82,13 @@ test('تبويب السور: شريط «السور · الأجزاء · الأر
 
   // يعود إلى السور كلما فُتحت القائمة
   await clickTopbar(page, 'القائمة');
-  await expect(side(page).locator('.sidemenu__index').getByRole('tab').first()).toHaveAttribute('aria-selected', 'true');
+  await expect(side(page).locator('.sidemenu__index').getByRole('radio').first()).toHaveAttribute('aria-checked', 'true');
 });
 
 test('الأرباع: ٢٤٠ ربعا تحت عناوين الأجزاء بأول كلماتها، والضغط ينقل إليه وينبّه', async ({ page }) => {
   await openApp(page, { 'hq.page': '300' });
   await clickTopbar(page, 'القائمة');
-  await side(page).locator('.sidemenu__index').getByRole('tab', { name: 'الأرباع' }).click();
+  await side(page).locator('.sidemenu__index').getByRole('radio', { name: 'الأرباع' }).click();
   await expect(side(page).locator('.sidemenu__rubs > li')).toHaveCount(240);
   await expect(side(page).locator('.sidemenu__rubJuz')).toHaveCount(30);
   const rows = side(page).locator('.sidemenu__rubs > li');

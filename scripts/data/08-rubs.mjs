@@ -6,6 +6,17 @@
 // في المطبوع حيث يبدأ الربع بإطار اسم السورة). فإن خالف شيء من ذلك توقف البناء.
 //
 // المخرج: rubs في public/data/quran.json — رقم أول آية (في المصحف، من ٠) لكل ربع بالترتيب.
+//
+// والأجزاء على المطبوع: في هامش مصحف المدينة المطبوع يُكتب «الجزء ن · الحزب م» عند علامة ۞ التي
+// يبدأ بها الجزء، فالجزء ن يبدأ بالربع ٨(ن−١)+١. ونص المجمع (حقل jozz) يخالف ذلك في موضعين:
+// يجعل «لن تنالوا البر» (آل عمران ٩٢) أول الجزء ٤، والمطبوع عند «۞ كل الطعام» (٩٣)؛ ويجعل
+// «۞ إنما السبيل» (التوبة ٩٣) آخر الجزء ١٠، والمطبوع أول الجزء ١١ (الصفحتان ٦٢ و٢٠١ من المطبوع).
+// فيُعاد حساب جزء كل آية من الأرباع، ويُتوقف إن تغيّر غير هاتين الآيتين.
+//
+// وترويسة الصفحة في المطبوع تذكر جزء أول آية فيها، إلا صفحتين يبدأ فيهما جزء جديد فتذكرانه:
+// ٦٢ «الجزء الرابع» (يبدأ في سطرها الثاني) و٥٠٢ «الجزء السادس والعشرون» (يبدأ بالأحقاف في سطرها
+// التاسع)؛ والصفحتان الأخريان اللتان يبدأ فيهما جزء في وسطهما، ١٢١ و٢٠١، تذكران جزء أولهما
+// («السادس» و«العاشر»). فتُحفظ الأولى والثانية في juzHeaders (src/data/quran.js: pageInfo).
 import { readFile, writeFile, mkdir, access } from 'node:fs/promises';
 
 const QURAN = 'public/data/quran.json';
@@ -35,23 +46,28 @@ const set = new Set(rubs);
 const marked = quran.verses.map((x, v) => (x.t.includes(RUB) ? v : null)).filter((v) => v != null);
 for (const v of marked) if (!set.has(v)) problems.push(`علامة ۞ في ${key(v)} وليست أول ربع`);
 for (const v of rubs) if (!quran.verses[v].t.includes(RUB) && quran.verses[v].a !== 1) problems.push(`أول ربع ${key(v)} بلا علامة ۞ وليس أول سورة`);
-// كل جزء يبدأ بحزب، إلا جزأين يختلف فيهما موضع بداية الجزء في نص المجمع عن علامة ۞ بآية واحدة:
-// الجزء ٤ من «لن تنالوا البر» (آل عمران ٩٢) و۞ عند «كل الطعام» (٩٣)، والجزء ١١ من «يعتذرون إليكم»
-// (التوبة ٩٤) و۞ عند «إنما السبيل» (٩٣). فالمعتمد للأرباع العلامة، وللأجزاء ما في نص المجمع
-const JUZ_SHIFT = { 4: '3:93', 11: '9:93' };
-for (let j = 1; j <= 30; j++) {
-  const first = quran.verses.findIndex((x) => x.j === j);
-  const rub = rubs[(j - 1) * 8];
-  if (rub !== first && key(rub) !== JUZ_SHIFT[j]) problems.push(`الجزء ${j} لا يبدأ بأول حزب`);
-}
+// جزء كل آية من الأرباع: الجزء ن من أول الربع ٨(ن−١)+١ إلى ما قبل أول الربع ٨ن+١
+const EXPECTED_JUZ_CHANGES = ['3:92 4→3', '9:93 10→11'];
+const juzChanges = [];
+let juz = 0;
+quran.verses.forEach((x, v) => {
+  if (juz < 30 && v === rubs[juz * 8]) juz++;
+  if (x.j !== juz) juzChanges.push(`${key(v)} ${x.j}→${juz}`);
+  x.j = juz;
+});
+// إن أُعيد التشغيل على بيانات صُحِّحت من قبل فلا تغيير
+if (juzChanges.length && juzChanges.join() !== EXPECTED_JUZ_CHANGES.join()) problems.push(`تغيّر جزء آيات غير المتوقعة: ${juzChanges.join('، ')}`);
+const JUZ_HEADERS = { 62: 4, 502: 26 };
 
 console.log('═══ تقرير الأرباع ═══');
 console.log(`الأرباع: ${rubs.length} · بعلامة ۞: ${marked.length} · في أول سورة: ${rubs.length - marked.length}`);
+console.log(`تصحيح جزء الآيات على المطبوع: ${juzChanges.join('، ') || 'لا شيء (مصحَّح من قبل)'}`);
 problems.forEach((p) => console.log(`     ✗ ${p}`));
 if (problems.length) {
   process.exitCode = 1;
 } else {
   quran.rubs = rubs;
+  quran.juzHeaders = JUZ_HEADERS;
   await writeFile(QURAN, JSON.stringify(quran));
-  console.log(`أُضيفت rubs إلى ${QURAN}`);
+  console.log(`أُضيفت rubs وjuzHeaders إلى ${QURAN}`);
 }
