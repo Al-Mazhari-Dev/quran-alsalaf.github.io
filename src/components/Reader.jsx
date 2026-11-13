@@ -40,6 +40,8 @@ const META_H = 30;
 const juzLabel = (j) => `الجزء ${toArabicDigits(j)}`;
 // الترويسة بلا تشكيل (بطلب صاحب المشروع)
 const stripTashkeel = (s) => s.replace(/[ً-ٰٟۖ-ۭـ]/g, '').replace(/ٱ/g, 'ا');
+// السور التي تذكرها ترويسة الصفحة (اثنتان أو ثلاث في قصار السور آخر المصحف، كالمطبوع)
+const suraLabel = (suras) => suras.map((s) => stripTashkeel(SURA_NAMES_VOWELED[s.n - 1])).join(' · ');
 const PAD_X = 3;
 
 // لمسة خفيفة (بلا سحب) تُظهر الخانتين السفليتين أو تخفيهما: أقصر من هذه المدّة
@@ -442,7 +444,7 @@ function Spread({ quran, start, area, shift, current, marks, outside }) {
 // half: صفحة من زوج (موضعها في الزوج لا في الشريط)، وfont حال خطّي الزوج معًا
 // outside: صفحة من الزوج خارج حدود المصحف المحدود (ورد الختمة) — تظهر باهتة
 function Sheet({ quran, page, layout, scroll, shift, current, marks, half, font: pairFont, outside }) {
-  const { sura, juz } = pageInfo(quran, page);
+  const { suras, juz } = pageInfo(quran, page);
   const own = usePageFont(page);
   const font = pairFont ?? own;
   return (
@@ -460,7 +462,7 @@ function Sheet({ quran, page, layout, scroll, shift, current, marks, half, font:
           {/* أيقونة اليمنى/اليسرى في نسخة الجوال وحدها؛ في نسخة اللابتوب الصفحتان ظاهرتان فلا حاجة لها */}
           {!half && <PageSideIcon right={page % 2 === 1} />}
         </span>
-        <span className="sheet__sura">{stripTashkeel(SURA_NAMES_VOWELED[sura.n - 1])}</span>
+        <span className={`sheet__sura${suras.length > 2 ? ' sheet__sura--three' : ''}`}>{suraLabel(suras)}</span>
       </header>
       {/* لا تُرسم الصفحة قبل وصول خطها، وإلا ظهرت رموز كلماتها حروفًا مبعثرة بخط آخر */}
       {font === 'ready' ? (

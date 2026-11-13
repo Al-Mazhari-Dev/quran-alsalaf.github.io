@@ -30,6 +30,8 @@ const MAX_FRAME_MS = 100; // أطول مدة تُحسب لإطار واحد، ف
 
 // الترويسة بلا تشكيل كما في القارئ العادي (بطلب صاحب المشروع)
 const stripTashkeel = (s) => s.replace(/[ً-ٰٟۖ-ۭـ]/g, '').replace(/ٱ/g, 'ا');
+// السور التي تذكرها ترويسة الصفحة (اثنتان أو ثلاث في قصار السور آخر المصحف، كالمطبوع)
+const suraLabel = (suras) => suras.map((s) => stripTashkeel(SURA_NAMES_VOWELED[s.n - 1])).join(' · ');
 const juzLabel = (j) => `الجزء ${toArabicDigits(j)}`;
 const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
 
@@ -276,7 +278,7 @@ export default function ReadingMode({ quran, startPage, marks, cardOpen, onLongP
 
 // صفحة في التدفق: فاصل رفيع (الجزء · رقم الصفحة · السورة) ثم الصفحة بتخطيطها الأصلي
 const FlowPage = memo(function FlowPage({ quran, page, top, layout, marks }) {
-  const { sura, juz } = pageInfo(quran, page);
+  const { suras, juz } = pageInfo(quran, page);
   const font = usePageFont(page);
   return (
     <section
@@ -287,7 +289,7 @@ const FlowPage = memo(function FlowPage({ quran, page, top, layout, marks }) {
       <div className="flow__sep" style={{ height: `${SEP_H}px`, width: `${layout.width}px` }}>
         <span>{juzLabel(juz)}</span>
         <span className="flow__num">{toArabicDigits(page)}</span>
-        <span>{stripTashkeel(SURA_NAMES_VOWELED[sura.n - 1])}</span>
+        <span>{suraLabel(suras)}</span>
       </div>
       {font === 'ready' ? (
         <MushafPage

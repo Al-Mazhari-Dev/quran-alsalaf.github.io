@@ -13,10 +13,7 @@
 // «۞ إنما السبيل» (التوبة ٩٣) آخر الجزء ١٠، والمطبوع أول الجزء ١١ (الصفحتان ٦٢ و٢٠١ من المطبوع).
 // فيُعاد حساب جزء كل آية من الأرباع، ويُتوقف إن تغيّر غير هاتين الآيتين.
 //
-// وترويسة الصفحة في المطبوع تذكر جزء أول آية فيها، إلا صفحتين يبدأ فيهما جزء جديد فتذكرانه:
-// ٦٢ «الجزء الرابع» (يبدأ في سطرها الثاني) و٥٠٢ «الجزء السادس والعشرون» (يبدأ بالأحقاف في سطرها
-// التاسع)؛ والصفحتان الأخريان اللتان يبدأ فيهما جزء في وسطهما، ١٢١ و٢٠١، تذكران جزء أولهما
-// («السادس» و«العاشر»). فتُحفظ الأولى والثانية في juzHeaders (src/data/quran.js: pageInfo).
+// وترويسة الصفحة (السورة والجزء) لا تُحفظ هنا: تُحسب بقاعدة المطبوع في src/data/quran.js (pageInfo).
 import { readFile, writeFile, mkdir, access } from 'node:fs/promises';
 
 const QURAN = 'public/data/quran.json';
@@ -57,7 +54,6 @@ quran.verses.forEach((x, v) => {
 });
 // إن أُعيد التشغيل على بيانات صُحِّحت من قبل فلا تغيير
 if (juzChanges.length && juzChanges.join() !== EXPECTED_JUZ_CHANGES.join()) problems.push(`تغيّر جزء آيات غير المتوقعة: ${juzChanges.join('، ')}`);
-const JUZ_HEADERS = { 62: 4, 502: 26 };
 
 console.log('═══ تقرير الأرباع ═══');
 console.log(`الأرباع: ${rubs.length} · بعلامة ۞: ${marked.length} · في أول سورة: ${rubs.length - marked.length}`);
@@ -67,7 +63,7 @@ if (problems.length) {
   process.exitCode = 1;
 } else {
   quran.rubs = rubs;
-  quran.juzHeaders = JUZ_HEADERS;
+  delete quran.juzHeaders; // كانت استثناءً يدويًا لصفحتين، وحلّت محلها القاعدة في pageInfo
   await writeFile(QURAN, JSON.stringify(quran));
-  console.log(`أُضيفت rubs وjuzHeaders إلى ${QURAN}`);
+  console.log(`أُضيفت rubs إلى ${QURAN}`);
 }
