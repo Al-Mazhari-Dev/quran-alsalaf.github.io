@@ -31,12 +31,12 @@ function rulesFor(page, c) {
     `12 ${c.fill}`,
     '14 transparent',
   ].join(', ');
-  // لوحة ثانية كلها بلون التطبيق: لوميض علامة الربع ۞ عند الوصول إلى صفحتها (MushafPage)
+  // لوحة ثانية كلها بلون التطبيق: تُلوَّن بها علامة الربع ۞ الأصلية عند الوصول إلى صفحتها (MushafPage)
   const accent = Array.from({ length: 16 }, (_, i) => `${i} ${c.ornament}`).join(', ');
   return `@font-palette-values --qcf${page} { font-family: '${family}'; override-colors: ${slots}; }
 @font-palette-values --qcf${page}a { font-family: '${family}'; override-colors: ${accent}; }
 .qp-${page} { font-family: '${family}'; font-palette: --qcf${page}; }
-.qp-${page} .w__rubFlash { font-palette: --qcf${page}a; }
+.qp-${page} .w__rub--flash { font-palette: --qcf${page}a; }
 `;
 }
 

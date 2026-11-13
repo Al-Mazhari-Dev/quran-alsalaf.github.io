@@ -114,36 +114,35 @@
   }
 }
 
-/* بداية الربع (٢٠٢٦-١١-١٣): عند الوصول إلى صفحتها تومض علامة ۞ بلون التطبيق وخلفها تظليل خفيف نحو
-   ثانيتين ونصف، ثم يتلاشيان في نصف ثانية (src/lib/rubs.js يزيل الوميض بنهاية التلاشي).
-   والعلامة الملوّنة نسخة فوق العلامة الأصلية بلوحة ألوان التطبيق (qcfFonts.js)، فيتلاشى لونها
-   تدريجيًّا. والربع الذي يبدأ بأول سورة يومض إطار اسمها. ولمن طلب تقليل الحركة يزول دفعة واحدة */
+/* بداية الربع (٢٠٢٦-١١-١٣): عند الوصول إلى صفحتها تتلوّن علامة ۞ الأصلية نفسها بلون التطبيق (لوحة
+   --qcfNa في qcfFonts.js، بلا نسخة ثانية فوقها)، وخلفها تظليل دائري صغير حول العلامة وحدها لا بارتفاع
+   السطر، نحو ثانيتين ونصف، ثم يتلاشى التظليل في نصف ثانية وتعود العلامة إلى لونها (src/lib/rubs.js يزيل
+   الوميض بنهاية التلاشي). والربع الذي يبدأ بأول سورة يومض إطار اسمها. ولمن طلب تقليل الحركة يزول دفعة واحدة.
+   موضع الدائرة: صندوق الرمز من أعلى الخط (صعوده ١٫٥٦٥em في خطوط الصفحات كلها) إلى أسفله، والعلامة
+   فوق خط الأساس بقليل، فمركز الدائرة على ١٫٤٢em من أعلى الصندوق، وفي وسطه عرضًا */
 .w__rub {
   position: relative;
-  border-radius: 0.18em;
+  isolation: isolate;
 }
 
-.w__rub--flash {
-  background: var(--accent-playing);
-  animation: rub-flash-bg 0.6s ease-out 2.4s forwards;
-}
-
-.w__rubFlash {
+.w__rub--flash::before {
+  content: '';
   position: absolute;
-  inset: 0;
-  animation: rub-flash 0.6s ease-out 2.4s forwards;
+  z-index: -1;
+  top: 0.92em;
+  left: 50%;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  background: var(--accent-playing);
+  transform: translateX(-50%);
+  animation: rub-flash-bg 0.6s ease-out 2.4s forwards;
 }
 
 .line--rubflash {
   border-radius: var(--r-md);
   background: var(--accent-playing);
   animation: rub-flash-bg 0.6s ease-out 2.4s forwards;
-}
-
-@keyframes rub-flash {
-  to {
-    opacity: 0;
-  }
 }
 
 @keyframes rub-flash-bg {
