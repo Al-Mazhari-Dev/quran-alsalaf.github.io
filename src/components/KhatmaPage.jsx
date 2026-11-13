@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Reader from './Reader.jsx';
 import { toArabicDigits } from '../data/quran.js';
 import { spreadStart } from '../lib/layout.js';
 import { useLayer } from '../lib/layers.js';
 import { wirdSuras } from './KhatmaTab.jsx';
+import { useRubAlert } from '../lib/rubs.js';
 import './Khatma.css';
 
 /*
@@ -14,7 +15,7 @@ import './Khatma.css';
 */
 const n = toArabicDigits;
 
-export default function KhatmaPage({ quran, wird, next, onClose, onComplete, onLongPress, marks }) {
+export default function KhatmaPage({ quran, wird, next, onClose, onComplete, onLongPress, onToast, marks }) {
   const [a, b] = wird;
   const layer = useLayer(onClose);
   const [page, setPage] = useState(a);
@@ -25,6 +26,9 @@ export default function KhatmaPage({ quran, wird, next, onClose, onComplete, onL
   const count = b - a + 1;
   const shown = (spread ? [spreadStart(page), spreadStart(page) + 1] : [page]).filter((p) => p >= a && p <= b);
   const at = shown.map((p) => p - a + 1);
+  // التنبيه ببداية الربع (src/lib/rubs.js): وفتح الصفحة انتقال إلى أول الورد، فيُنبَّه به أيضًا
+  const rubFlash = useRubAlert({ quran, pages: shown, initial: true, onToast });
+  const pageMarks = useMemo(() => ({ ...marks, rubFlash }), [marks, rubFlash]);
   const atEnd = shown.includes(b);
   const where =
     at.length > 1 ? `الصفحتان ${n(at[0])}–${n(at[1])} من ${n(count)}` : `الصفحة ${n(at[0] ?? 1)} من ${n(count)}`;
@@ -55,7 +59,7 @@ export default function KhatmaPage({ quran, wird, next, onClose, onComplete, onL
           onPage={onPage}
           onSpread={onSpread}
           onLongPress={onLongPress}
-          marks={marks}
+          marks={pageMarks}
           arrows
         />
       </div>

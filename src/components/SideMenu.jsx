@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { toArabicDigits } from '../data/quran.js';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { juzName, toArabicDigits } from '../data/quran.js';
 import { AYAT, countNoun } from '../lib/count.js';
 import { verseLabel } from '../lib/study.js';
 import { BOOKMARK_COLORS, moveBookmark, removeBookmark, renameBookmark, setNote, useUserData } from '../lib/userdata.js';
@@ -7,13 +7,22 @@ import RangePicker from './RangePicker.jsx';
 import KhatmaTab from './KhatmaTab.jsx';
 import './SideMenu.css';
 import { useLayer } from '../lib/layers.js';
+import { juzStarts, rubName, rubOpening } from '../lib/rubs.js';
 
 /*
   القائمة الجانبية (الفصل ٧): صفحة كاملة تنزلق من اليمين (أيقونتها في الشريط العلوي هناك)،
   بأربعة تبويبات في شريط أسفلها (٢٠٢٦-١١-١٢، كان أعلاها): الختمة، السور (فهرس)، العلامات المرجعية،
   الملاحظات (بترتيب ورودها في المصحف). وتُفتح على آخر تبويب استعمله المستخدم.
   الضغط على سورة أو علامة ينقل مباشرة إلى موضعها ويُغلق القائمة.
+  وفي أعلى تبويب السور (٢٠٢٦-١١-١٣) شريط «السور · الأجزاء · الأرباع»، يُفتح دائمًا على السور.
 */
+const INDEXES = [
+  { id: 'suras', name: 'السور' },
+  { id: 'juz', name: 'الأجزاء' },
+  { id: 'rubs', name: 'الأرباع' },
+];
+// رمز الربع في دائرته: رقم الحزب لأوله، ثم ¼ ½ ¾
+const RUB_SIGNS = ['', '¼', '½', '¾'];
 const TAB_KEY = 'hq.sideTab';
 const TABS = [
   { id: 'khatma', name: 'الختمة', icon: 'M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5M12 6.5c2-1.5 5-2 8-1.5v13c-3-.5-6 0-8 1.5M12 6.5v13' },
@@ -41,6 +50,17 @@ export default function SideMenu({ quran, open, onGoto, onClose, onReadWird, onT
     }
   };
   useLayer(onClose, open);
+  // فهرس تبويب السور: السور أو الأجزاء أو الأرباع، ويرجع إلى السور كلما فُتحت القائمة
+  const [index, setIndex] = useState('suras');
+  const bodyRef = useRef(null);
+  useEffect(() => {
+    if (open) setIndex('suras');
+  }, [open]);
+  const pickIndex = (id) => {
+    setIndex(id);
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  };
+  const juzs = useMemo(() => (quran ? juzStarts(quran) : []), [quran]);
   const user = useUserData();
   // الملاحظات مرتبة بترتيب الآيات في المصحف لا بوقت إضافتها
   const noteEntries = useMemo(
@@ -67,21 +87,76 @@ export default function SideMenu({ quran, open, onGoto, onClose, onReadWird, onT
           </button>
         </header>
 
-        <div className="sidemenu__body">
+        <div className="sidemenu__body" ref={bodyRef}>
           {tab === 'khatma' && <KhatmaTab quran={quran} onRead={onReadWird} onToast={onToast} />}
 
           {tab === 'suras' && (
-            <ul className="sidemenu__suras">
-              {quran.suras.map((s) => (
-                <li key={s.n}>
-                  <button type="button" onClick={() => goto(quran.verses.findIndex((v) => v.s === s.n))}>
-                    <span className="sidemenu__suraNum">{toArabicDigits(s.n)}</span>
-                    <span className="sidemenu__suraName">سورة {s.name}</span>
-                    <span className="sidemenu__suraMeta">{toArabicDigits(s.count)} {countNoun(s.count, AYAT)}</span>
+            <>
+              <div className="sidemenu__index" role="tablist" aria-label="الفهرس">
+                {INDEXES.map((x) => (
+                  <button key={x.id} type="button" role="tab" aria-selected={index === x.id} onClick={() => pickIndex(x.id)}>
+                    {x.name}
                   </button>
-                </li>
-              ))}
-            </ul>
+                ))}
+              </div>
+
+              {index === 'suras' && (
+                <ul className="sidemenu__suras">
+                  {quran.suras.map((s) => (
+                    <li key={s.n}>
+                      <button type="button" onClick={() => goto(quran.verses.findIndex((v) => v.s === s.n))}>
+                        <span className="sidemenu__suraNum">{toArabicDigits(s.n)}</span>
+                        <span className="sidemenu__suraName">سورة {s.name}</span>
+                        <span className="sidemenu__suraMeta">{toArabicDigits(s.count)} {countNoun(s.count, AYAT)}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {index === 'juz' && (
+                <ul className="sidemenu__suras sidemenu__juzs">
+                  {juzs.map((v, i) => (
+                    <li key={i}>
+                      <button type="button" onClick={() => goto(v)}>
+                        <span className="sidemenu__suraNum">{toArabicDigits(i + 1)}</span>
+                        <span className="sidemenu__suraName">
+                          {juzName(i + 1)}
+                          <small>{verseLabel(quran, [v])}</small>
+                        </span>
+                        <span className="sidemenu__suraMeta">صفحة {toArabicDigits(quran.verses[v].p)}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {index === 'rubs' &&
+                juzs.map((_, j) => (
+                  <section key={j} className="sidemenu__rubGroup" aria-label={juzName(j + 1)}>
+                    <h3 className="sidemenu__rubJuz">{juzName(j + 1)}</h3>
+                    <ul className="sidemenu__suras sidemenu__rubs">
+                      {quran.rubs.slice(j * 8, j * 8 + 8).map((v, k) => {
+                        const i = j * 8 + k;
+                        return (
+                          <li key={i}>
+                            <button type="button" onClick={() => goto(v)}>
+                              <span className={`sidemenu__suraNum${i % 4 ? ' sidemenu__rubSign' : ''}`}>
+                                {i % 4 ? RUB_SIGNS[i % 4] : toArabicDigits(i / 4 + 1)}
+                              </span>
+                              <span className="sidemenu__suraName">
+                                {rubName(i)}
+                                <small>{rubOpening(quran, i)}</small>
+                              </span>
+                              <span className="sidemenu__suraMeta">صفحة {toArabicDigits(quran.verses[v].p)}</span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))}
+            </>
           )}
 
           {tab === 'notes' &&
