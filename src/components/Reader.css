@@ -75,6 +75,11 @@
   justify-self: end;
 }
 
+/* ثلاث سور في الترويسة (٦٠١–٦٠٤ كالمطبوع): أصغر قليلًا ليبقى رقم الصفحة في الوسط على الجوال */
+.sheet__sura--three {
+  font-size: 0.9em;
+}
+
 .sheet__num {
   display: inline-flex;
   align-items: center;

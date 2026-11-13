@@ -1,5 +1,5 @@
 // أرباع الأحزاب (src/lib/rubs.js وscripts/data/08-rubs.mjs): البيانات، ونص التنبيه، وفهرس الأجزاء والأرباع،
-// وبداية الجزأين ٤ و١١ وترويسة الصفحتين ٦٢ و٥٠٢ كما في مصحف المدينة المطبوع
+// وبداية الجزأين ٤ و١١ وترويسة الصفحات التي يبدأ فيها جزء كما في مصحف المدينة المطبوع (وبقية الترويسة في headers.test.js)
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { RUB_MESSAGES, hizbOf, juzStarts, rubMessage, rubName, rubOpening, rubStarts, rubsOnPage } from '../../src/lib/rubs.js';
