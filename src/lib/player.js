@@ -32,7 +32,7 @@ function readSettings() {
 // status: 'idle' | 'loading' | 'playing' | 'paused' — v: الآية الجاري تلاوتها
 // n: يُزاد عند بدء كل مقطع (آية أو بسملة أو إعادتها)، فيُعرف به بدء الآية التالية ولو كانت هي نفسها
 // download: null أو { active, done, fileIndex, fileCount, pct } — تقدّم التنزيل المنفصل
-let state = { status: 'idle', v: null, n: 0, settings: readSettings(), error: null, download: null };
+let state = { status: 'idle', v: null, n: 0, settings: readSettings(), error: null, download: null, preview: null };
 const listeners = new Set();
 function set(patch) {
   state = { ...state, ...patch };
@@ -43,6 +43,8 @@ const subscribe = (l) => {
   return () => listeners.delete(l);
 };
 export const usePlayer = () => useSyncExternalStore(subscribe, () => state);
+// الحالة الحالية خارج React (للاختبارات)
+export const playerState = () => state;
 
 // ---------- المحرّك ----------
 let audio = null;
@@ -339,5 +341,72 @@ function updateMetadata() {
     navigator.mediaSession.playbackState = 'playing';
   } catch {
     // MediaMetadata غير مدعوم
+  }
+}
+
+// ---------- معاينة صوت القارئ (٢٠٢٦-١١-١٣) ----------
+// من قائمة اختيار القارئ: تُسمِع «الحمد لله رب العالمين» (الفاتحة ٢) بصوت القارئ، بعنصر صوت مستقل عن
+// التلاوة، فلا تغيّر القارئ المختار ولا المقدار ولا الإعدادات. ومعاينة واحدة في كل مرة.
+// إن كانت التلاوة شغّالة توقفت مؤقتًا أثناءها، ثم تُكمل من حيث وقفت عند انتهاء المعاينة أو إيقافها.
+// state.preview: null أو { id, status: 'loading' | 'playing' }
+export const PREVIEW_AYAH = { s: 1, a: 2 };
+let previewEl = null;
+let previewToken = 0;
+let resumeAfterPreview = false;
+let previewFail = null;
+
+function ensurePreviewEl() {
+  if (previewEl) return previewEl;
+  previewEl = new Audio();
+  previewEl.preload = 'auto';
+  previewEl.addEventListener('ended', () => endPreview());
+  previewEl.addEventListener('playing', () => state.preview && set({ preview: { ...state.preview, status: 'playing' } }));
+  // (إنهاء المعاينة يصفّر state.preview قبل أن يصل أي حدث من تفريغ العنصر، فلا يُعدّ خطأ)
+  previewEl.addEventListener('error', () => state.preview && failPreview());
+  return previewEl;
+}
+
+function failPreview() {
+  const fail = previewFail;
+  endPreview();
+  fail?.();
+}
+
+// يبدأ معاينة القارئ id (ويوقف أي معاينة قبلها). onFail: يُستدعى إن تعذّر التشغيل
+export function previewReciter(id, onFail) {
+  const el = ensurePreviewEl();
+  const token = ++previewToken;
+  previewFail = onFail;
+  // التلاوة الجارية تتوقف مؤقتًا، وتُستأنف بعد المعاينة (لا إن كان المستخدم قد أوقفها بنفسه)
+  if (!state.preview && audio && (state.status === 'playing' || state.status === 'loading')) {
+    resumeAfterPreview = true;
+    pause();
+  }
+  set({ preview: { id, status: 'loading' } });
+  el.src = ayahUrl(reciterById(id), PREVIEW_AYAH.s, PREVIEW_AYAH.a);
+  el.play().catch((e) => {
+    if (token !== previewToken || e?.name === 'AbortError') return;
+    failPreview();
+  });
+}
+
+// يوقف المعاينة (إن وُجدت) ويستأنف التلاوة إن أوقفتها المعاينة
+export function stopPreview() {
+  if (!state.preview && !resumeAfterPreview) return;
+  endPreview();
+}
+
+function endPreview() {
+  previewToken++;
+  previewFail = null;
+  if (previewEl) {
+    previewEl.pause();
+    previewEl.removeAttribute('src');
+    previewEl.load();
+  }
+  set({ preview: null });
+  if (resumeAfterPreview) {
+    resumeAfterPreview = false;
+    if (state.status === 'paused') resume();
   }
 }

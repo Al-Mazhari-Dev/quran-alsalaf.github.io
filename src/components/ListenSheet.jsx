@@ -131,6 +131,7 @@ export default function ListenSheet({ quran, verses, continuous, label, suras, r
           suras={suras}
           onPick={chooseReciter}
           onClose={() => setPickerOpen(false)}
+          onToast={onToast}
         />
       )}
     </div>
