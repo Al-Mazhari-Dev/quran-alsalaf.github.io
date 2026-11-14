@@ -393,7 +393,7 @@ test.describe('معاينة صوت القارئ', () => {
     await openPicker(page);
     const radios = picker(page).getByRole('radio');
     const count = await radios.count();
-    expect(count).toBeGreaterThanOrEqual(34);
+    expect(count).toBeGreaterThanOrEqual(37);
     await expect(picker(page).getByRole('button', { name: /^معاينة صوت / })).toHaveCount(count);
 
     await picker(page).getByRole('button', { name: 'معاينة صوت ماهر المعيقلي' }).click();
@@ -416,6 +416,28 @@ test.describe('معاينة صوت القارئ', () => {
     await picker(page).getByRole('button', { name: 'إيقاف المعاينة' }).click();
     await expect(picker(page).getByRole('button', { name: 'إيقاف المعاينة' })).toHaveCount(0);
     expect(await previewPlaying(page)).toBe(false);
+  });
+
+  test('القرّاء الثلاثة المضافون: معاينة كل واحد من مقطعه المبني مع التطبيق، واختياره يقرأ من مجلده', async ({ page }) => {
+    await openApp(page, { 'hq.page': '1' });
+    await clickDock(page, 'الاستماع للآيات');
+    await openPicker(page);
+    const added = [
+      ['أكرم العلاقمي', 'Akram_AlAlaqimy_128kbps'],
+      ['سهل ياسين', 'Sahl_Yassin_128kbps'],
+      ['عزيز عليلي', 'aziz_alili_128kbps'],
+    ];
+    for (const [name, folder] of added) {
+      await picker(page).getByRole('button', { name: `معاينة صوت ${name}`, exact: true }).click();
+      expect(await lastSrc(page)).toMatch(new RegExp(`/audio/preview/${folder}/001002\\.mp3$`));
+      expect(await previewPlaying(page)).toBe(true);
+    }
+    // اختيار سهل ياسين ثم التشغيل: ملفات الآيات من مجلده في everyayah
+    await picker(page).getByRole('radio', { name: 'سهل ياسين', exact: true }).click();
+    await expect(picker(page)).toHaveCount(0);
+    await expect(listen(page).locator('.listen__value')).toContainText('سهل ياسين');
+    await listen(page).getByRole('button', { name: 'تشغيل' }).click();
+    await expect.poll(() => lastSrc(page)).toMatch(/everyayah\.com\/data\/Sahl_Yassin_128kbps\/001001\.mp3$/);
   });
 
   test('تنتهي المعاينة وحدها بانتهاء الآية، وإغلاق القائمة يوقفها', async ({ page }) => {
