@@ -75,14 +75,19 @@ describe('النسخ إلى الحافظة', () => {
 });
 
 describe('مقررات الأسابيع', () => {
-  it('درجتان متناوبتان بترتيب المصحف، وما خارج المقررات بلا تمييز', () => {
-    const { shade } = weekMap(quran);
+  it('مقرر مظلَّل والذي بعده بلا تظليل بترتيب المصحف، وما خارج المقررات بلا تظليل', () => {
+    const { shaded } = weekMap(quran);
     const weeks = quran.memos.weeks;
-    expect(shade(weeks[0][0])).toBe('a');
-    expect(shade(weeks[1][0])).toBe('b');
-    expect(shade(weeks[2][1])).toBe('a');
-    expect(shade(v(18, 10))).toBeNull();
-    expect(shade(-1)).toBeNull();
+    // كل آيات المقرر الواحد على حال واحدة: الأول والثالث مظلَّلان، والثاني والرابع لا
+    for (let i = 0; i < 4; i++) {
+      const [from, to] = weeks[i];
+      for (let x = from; x <= to; x++) expect(shaded(x)).toBe(i % 2 === 0);
+    }
+    // الحدّ بين مقررين: آخر آية في الأول مظلَّلة وأول آية في الثاني لا
+    expect(shaded(weeks[0][1])).toBe(true);
+    expect(shaded(weeks[1][0])).toBe(false);
+    expect(shaded(v(18, 10))).toBe(false);
+    expect(shaded(-1)).toBe(false);
   });
 });
 

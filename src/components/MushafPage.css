@@ -64,14 +64,10 @@
   padding-inline: 0.06em;
 }
 
-/* مقررات الأسابيع بدرجتين متناوبتين من لون التطبيق (src/lib/weeks.js)، ويُخفى لونها إن ألغى
-   المستخدم التمييز من الإعدادات */
-.w--week-a {
-  background: var(--week-a);
-}
-
-.w--week-b {
-  background: var(--week-b);
+/* مقررات الأسابيع (src/lib/weeks.js): مقرر مظلَّل بدرجة خفيفة من لون التطبيق والذي بعده بلا تظليل،
+   ويُخفى التظليل إن ألغى المستخدم التمييز من الإعدادات */
+.w--week {
+  background: var(--week);
 }
 
 :root[data-weeks='off'] .w--week {

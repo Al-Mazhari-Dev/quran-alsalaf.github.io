@@ -13,15 +13,15 @@
     {
       "id": "none", "name": "بلا لون", "ink": true,
       "mix": {
-        "light": { "soft": 7, "soft-strong": 12, "week-a": 5, "week-b": 10, "playing": 26, "decor-fill": 16 },
-        "dark": { "soft": 10, "soft-strong": 16, "week-a": 6, "week-b": 12, "playing": 24, "decor-fill": 22 }
+        "light": { "soft": 7, "soft-strong": 12, "week": 5, "playing": 26, "decor-fill": 16 },
+        "dark": { "soft": 10, "soft-strong": 16, "week": 6, "playing": 24, "decor-fill": 22 }
       }
     }
   ],
   "replaced": { "mauve": "none" },
   "defaults": { "light": "beige", "dark": "gray", "accent": "amber" },
   "mix": {
-    "light": { "surface": 3, "surface-2": 5.5, "surface-3": 8.5, "border": 11, "border-strong": 18, "muted": 74, "faint": 52, "soft": 10, "soft-strong": 17, "week-a": 7, "week-b": 15, "playing": 38, "decor-fill": 22, "decor-dot": 30 },
-    "dark": { "surface": 6, "surface-2": 9.5, "surface-3": 13, "border": 13, "border-strong": 21, "muted": 70, "faint": 48, "soft": 16, "soft-strong": 26, "week-a": 10, "week-b": 19, "playing": 39, "decor-fill": 36, "decor-dot": 30 }
+    "light": { "surface": 3, "surface-2": 5.5, "surface-3": 8.5, "border": 11, "border-strong": 18, "muted": 74, "faint": 52, "soft": 10, "soft-strong": 17, "week": 7, "playing": 38, "decor-fill": 22, "decor-dot": 30 },
+    "dark": { "surface": 6, "surface-2": 9.5, "surface-3": 13, "border": 13, "border-strong": 21, "muted": 70, "faint": 48, "soft": 16, "soft-strong": 26, "week": 10, "playing": 39, "decor-fill": 36, "decor-dot": 30 }
   }
 }

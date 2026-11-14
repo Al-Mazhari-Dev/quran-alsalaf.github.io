@@ -104,12 +104,14 @@ describe('التركيبات العشرون: الألوان المشتقة وت�
     for (const s of surfaces) expect(contrast(text, s)).toBeGreaterThanOrEqual(4.5);
 
     // الآية الجارية في الاستماع: نصها مقروء فوق تظليلها (٤٫٨ فأكثر، مقرَّبًا كما يُرسم)، وتظليلها
-    // أوضح من أقوى درجتي المقررات، وهي أوضح من الأخرى
+    // أوضح بوضوح من تظليل المقررات، وتظليل المقررات ظاهر على الخلفية خفيف
     const A = rgb(accentHex);
     const over = (p) => mix(B, A, p).map(Math.round);
     expect(contrast(rgb(bg.ink), over(k.playing))).toBeGreaterThanOrEqual(4.8);
-    expect(contrast(over(k.playing), B)).toBeGreaterThan(contrast(over(k['week-b']), B) * 1.25);
-    expect(contrast(over(k['week-b']), B)).toBeGreaterThan(contrast(over(k['week-a']), B));
+    expect(contrast(over(k.playing), B)).toBeGreaterThan(contrast(over(k.week), B) * 1.25);
+    expect(k.week).toBeGreaterThan(0);
+    expect(k.week).toBeLessThanOrEqual(10);
+    expect(k).not.toHaveProperty('week-b');
 
     // مقادير الاشتقاق مكتوبة متغيراتٍ لـtokens.css
     for (const [name, v] of Object.entries(k)) expect(cssVar(`--k-${name}`)).toBe(`${v}%`);

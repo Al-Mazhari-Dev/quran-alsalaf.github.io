@@ -136,8 +136,7 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
         // الآية المعلّمة (٢٠٢٦-١١-١٤): كلماتها كلها مظلَّلة بلون آخر علامة وُضعت عليها
         const bookmark = bookmarkOf.get(v);
         let cls = 'w';
-        const week = weeks.shade(v);
-        if (week) cls += ` w--week w--week-${week}`;
+        if (weeks.shaded(v)) cls += ' w--week';
         if (bookmark) cls += ' w--mark';
         if (outside(v)) cls += ' w--out';
         if (marks?.selected === v) cls += ' w--selected';
