@@ -1,5 +1,5 @@
 // العمل بلا إنترنت بعامل الخدمة الحقيقي (PWA): بعد أول فتح يعمل التطبيق والصفحات المفتوحة والتفسير
-// بلا اتصال، والصفحة التي لم تُفتح قط تُظهر رسالتها
+// ومعاينة صوت القرّاء بلا اتصال، والصفحة التي لم تُفتح قط تُظهر رسالتها
 import { test, expect } from '@playwright/test';
 import { clickDock, clickTopbar, prepare, savedPage, waitMushaf } from './helpers.js';
 
@@ -26,6 +26,17 @@ test('بعد أول فتح: يعمل بلا اتصال على آخر صفحة، 
   await clickDock(page, 'صفحات المحتوى');
   await expect(page.locator('.study .study__item').first()).toBeVisible();
   await page.keyboard.press('Escape');
+
+  // مقاطع معاينة القرّاء مخزَّنة مسبقًا: تعمل بلا اتصال
+  const previews = await page.evaluate(async () =>
+    Promise.all(
+      ['MaherAlMuaiqly128kbps', 'Husary_128kbps', 'alnufais'].map(async (f) => {
+        const res = await fetch(`./audio/preview/${f}/001002.mp3`);
+        return res.ok && (await res.blob()).size > 10_000;
+      })
+    )
+  );
+  expect(previews).toEqual([true, true, true]);
 
   // صفحة بعيدة لم تُفتح قط: رسالتها بدل حروف مبعثرة
   await clickTopbar(page, 'القائمة');

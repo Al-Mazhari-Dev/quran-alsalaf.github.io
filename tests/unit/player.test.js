@@ -1,5 +1,6 @@
 // منطق المشغّل: المقادير، وتكرار الآية والمقدار، والبسملة، والاستماع المتتابع، وتعديل المقدار
 // أثناء التشغيل، وتغيير القارئ — src/lib/player.js بعنصر صوت محاكى (بلا صوت حقيقي)
+import { existsSync, statSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 class FakeAudio extends EventTarget {
@@ -217,6 +218,19 @@ describe('معاينة صوت القارئ', () => {
     el.dispatchEvent(new Event('ended'));
     expect(P.playerState().preview).toBeNull();
     expect(el.paused).toBe(true);
+  });
+
+  it('مقطع المعاينة مبني مع التطبيق لكل قارئ (يعمل بلا إنترنت)، لا يُطلب من موقع الصوت', async () => {
+    const { RECITERS } = await import('../../src/lib/reciters.js');
+    for (const r of RECITERS) {
+      const f = `public/audio/preview/${r.folder}/001002.mp3`;
+      expect(existsSync(f), r.id).toBe(true);
+      expect(statSync(f).size, r.id).toBeGreaterThan(10_000);
+    }
+    P.previewReciter('nufais');
+    expect(FakeAudio.last.src).toBe('/audio/preview/alnufais/001002.mp3');
+    P.previewReciter('muaiqly');
+    expect(FakeAudio.last.src).not.toMatch(/everyayah|tarteel/);
   });
 
   it('معاينة واحدة في كل مرة: الثانية تحل محل الأولى بالعنصر نفسه', () => {
