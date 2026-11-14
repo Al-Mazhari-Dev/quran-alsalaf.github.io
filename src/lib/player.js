@@ -365,6 +365,9 @@ function updateMetadata() {
 // إن كانت التلاوة شغّالة توقفت مؤقتًا أثناءها، ثم تُكمل من حيث وقفت عند انتهاء المعاينة أو إيقافها.
 // state.preview: null أو { id, status: 'loading' | 'playing' }
 export const PREVIEW_AYAH = { s: 1, a: 2 };
+// مقطع المعاينة مبني مع التطبيق (public/audio/preview، scripts/data/09-previews.mjs) ويخزّنه عامل الخدمة
+// مسبقًا، فتعمل المعاينة بلا إنترنت (٢٠٢٦-١١-١٤)؛ لا يُطلب من موقع الصوت
+export const previewUrl = (r) => `${import.meta.env.BASE_URL}audio/preview/${r.folder}/001002.mp3`;
 let previewEl = null;
 let previewToken = 0;
 let resumeAfterPreview = false;
@@ -398,18 +401,11 @@ export function previewReciter(id, onFail) {
     pause();
   }
   set({ preview: { id, status: 'loading' } });
-  const remote = ayahUrl(reciterById(id), PREVIEW_AYAH.s, PREVIEW_AYAH.a);
-  const start = (url) => {
-    if (token !== previewToken) return;
-    el.src = url;
-    el.play().catch((e) => {
-      if (token !== previewToken || e?.name === 'AbortError') return;
-      failPreview();
-    });
-  };
-  // القارئ المحمَّل على الجهاز تُسمَع معاينته من ملفه المحفوظ، فتعمل بلا إنترنت
-  if (hasOfflineFiles(id)) localAudioUrl(id, remote).then((url) => start(url || remote));
-  else start(remote);
+  el.src = previewUrl(reciterById(id));
+  el.play().catch((e) => {
+    if (token !== previewToken || e?.name === 'AbortError') return;
+    failPreview();
+  });
 }
 
 // يوقف المعاينة (إن وُجدت) ويستأنف التلاوة إن أوقفتها المعاينة
