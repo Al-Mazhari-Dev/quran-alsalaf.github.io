@@ -43,16 +43,18 @@ beforeEach(() => {
 });
 
 describe('أول فتح والانتقال من المفتاح القديم', () => {
-  it('بيج وأزرق على الجهاز الفاتح', () => {
+  it('بيج وذهبي عنبري على الجهاز الفاتح', () => {
     boot();
     expect(localStorage.getItem('hq.bg')).toBe('beige');
-    expect(localStorage.getItem('hq.accent')).toBe('blue');
+    expect(localStorage.getItem('hq.accent')).toBe('amber');
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
-  it('رصاصي على الجهاز الداكن', () => {
+  it('بيج وذهبي عنبري على الجهاز الداكن أيضًا (لا يُقرأ وضع الجهاز)', () => {
     boot({ dark: true });
-    expect(localStorage.getItem('hq.bg')).toBe('gray');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(localStorage.getItem('hq.bg')).toBe('beige');
+    expect(localStorage.getItem('hq.accent')).toBe('amber');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(cssVar('--accent')).toBe(DATA.accents.find((a) => a.id === 'amber').light);
   });
   it('من اختار الداكن سابقًا ينتقل إلى رصاصي ويُحذف المفتاح القديم', () => {
     localStorage.setItem('hq.theme', 'dark');
@@ -65,7 +67,7 @@ describe('أول فتح والانتقال من المفتاح القديم', ()
     localStorage.setItem('hq.accent', 'nonexistent');
     boot({ dark: false });
     expect(document.documentElement.getAttribute('data-bg')).toBe('black');
-    expect(localStorage.getItem('hq.accent')).toBe('blue');
+    expect(localStorage.getItem('hq.accent')).toBe('amber');
   });
 });
 
