@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { juzName, toArabicDigits } from '../data/quran.js';
 import { AYAT, countNoun } from '../lib/count.js';
 import { verseLabel } from '../lib/study.js';
-import { BOOKMARK_COLORS, moveBookmark, removeBookmark, renameBookmark, setNote, useUserData } from '../lib/userdata.js';
-import RangePicker from './RangePicker.jsx';
+import { removeBookmark, setNote, unplaceBookmark, updateBookmark, useUserData } from '../lib/userdata.js';
+import BookmarkForm, { bookmarkMeta } from './BookmarkForm.jsx';
 import KhatmaTab from './KhatmaTab.jsx';
 import './SideMenu.css';
 import { useLayer } from '../lib/layers.js';
@@ -67,7 +67,13 @@ export default function SideMenu({ quran, open, onGoto, onClose, onReadWird, onT
     () => Object.entries(user.notes ?? {}).map(([v, text]) => ({ v: Number(v), text })).sort((a, b) => a.v - b.v),
     [user.notes]
   );
-  const bookmarks = useMemo(() => [...(user.bookmarks ?? [])].sort((a, b) => a.v - b.v), [user.bookmarks]);
+  // العلامات بترتيب إنشائها؛ والضغط على إحداها يدخل فيها: آياتها وإعداداتها (٢٠٢٦-١١-١٤)
+  const bookmarks = user.bookmarks ?? [];
+  const [openMark, setOpenMark] = useState(null);
+  const opened = bookmarks.find((b) => b.id === openMark);
+  useEffect(() => {
+    if (!open) setOpenMark(null);
+  }, [open]);
 
   const goto = (v) => {
     onGoto(quran.verses[v].p);
@@ -171,10 +177,18 @@ export default function SideMenu({ quran, open, onGoto, onClose, onReadWird, onT
             ))}
 
           {tab === 'bookmarks' &&
-            (bookmarks.length ? (
+            (opened ? (
+              <BookmarkDetail quran={quran} b={opened} onBack={() => setOpenMark(null)} onGoto={goto} />
+            ) : bookmarks.length ? (
               <ul className="sidemenu__list">
                 {bookmarks.map((b) => (
-                  <BookmarkRow key={b.id} quran={quran} b={b} onGoto={() => goto(b.v)} />
+                  <li key={b.id} className="sidemenu__row">
+                    <button type="button" className="sidemenu__rowMain" onClick={() => setOpenMark(b.id)}>
+                      <span className="sidemenu__dot" style={{ background: b.color }} />
+                      <span className="sidemenu__rowLabel">{b.name}</span>
+                      <span className="sidemenu__rowText">{bookmarkMeta(quran, b)}</span>
+                    </button>
+                  </li>
                 ))}
               </ul>
             ) : (
@@ -245,65 +259,111 @@ function NoteRow({ quran, v, text, onGoto }) {
   );
 }
 
-// صفّ علامة مرجعية: نقطة بلونها، اسم قابل لإعادة التسمية، ونقل إلى آية أخرى، وحذف
-function BookmarkRow({ quran, b, onGoto }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(b.name);
-  const [moving, setMoving] = useState(false);
+// داخل العلامة (٢٠٢٦-١١-١٤): اسمها ولونها، وزرّ إعداداتها (الاسم واللون والنوع والحذف)، ثم آياتها
+// بترتيب المصحف: الضغط على الآية ينقل إليها، وزرّ ✕ يزيلها من العلامة
+function BookmarkDetail({ quran, b, onBack, onGoto }) {
+  const [settings, setSettings] = useState(false);
+  const [confirm, setConfirm] = useState(null);
+  const verses = useMemo(() => b.verses.map((x) => x.v).sort((x, y) => x - y), [b.verses]);
+
+  const save = (values) => {
+    // تحويل المتعددة إلى متنقّلة وفيها أكثر من آية: تأكيد، ثم تبقى آخر آية وُضعت وحدها
+    if (!values.multi && b.multi && b.verses.length > 1 && confirm?.kind !== 'single') {
+      setConfirm({ kind: 'single', values });
+      return;
+    }
+    updateBookmark(b.id, values);
+    setConfirm(null);
+    setSettings(false);
+  };
+  const remove = () => {
+    if (b.verses.length && confirm?.kind !== 'delete') {
+      setConfirm({ kind: 'delete' });
+      return;
+    }
+    removeBookmark(b.id);
+    onBack();
+  };
 
   return (
-    <li className="sidemenu__row">
-      <button type="button" className="sidemenu__rowMain" onClick={onGoto}>
-        <span className="sidemenu__dot" style={{ background: BOOKMARK_COLORS[b.color] }} />
-        {editing ? (
-          <input
-            className="sidemenu__input"
-            value={draft}
-            autoFocus
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && (renameBookmark(b.id, draft), setEditing(false))}
-          />
-        ) : (
-          <span className="sidemenu__rowLabel">{b.name}</span>
-        )}
-        <span className="sidemenu__rowText">{verseLabel(quran, [b.v])}</span>
-      </button>
-      <div className="sidemenu__rowActions">
-        {editing ? (
-          <button
-            type="button"
-            className="sidemenu__save"
-            onClick={() => {
-              renameBookmark(b.id, draft);
-              setEditing(false);
-            }}
-          >
-            حفظ
-          </button>
-        ) : (
-          <button type="button" aria-label="إعادة تسمية العلامة" onClick={() => setEditing(true)}>
-            <PencilIcon />
-          </button>
-        )}
-        <button type="button" aria-label="نقل العلامة إلى آية أخرى" onClick={() => setMoving(true)}>
-          <MoveIcon />
+    <div className="bmdetail">
+      <header className="bmdetail__head">
+        <button type="button" className="bmdetail__icon" aria-label="رجوع إلى العلامات" onClick={onBack}>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
-        <button type="button" aria-label="حذف العلامة" onClick={() => removeBookmark(b.id)}>
-          <TrashIcon />
+        <span className="sidemenu__dot" style={{ background: b.color }} />
+        <h3 className="bmdetail__name">
+          {b.name}
+          <small>{bookmarkMeta(quran, b)}</small>
+        </h3>
+        <button
+          type="button"
+          className="bmdetail__icon"
+          aria-label="إعدادات العلامة"
+          aria-expanded={settings}
+          onClick={() => (setSettings((x) => !x), setConfirm(null))}
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h10M18 7h2M4 17h4M12 17h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            <circle cx="16" cy="7" r="2" stroke="currentColor" strokeWidth="1.7" />
+            <circle cx="10" cy="17" r="2" stroke="currentColor" strokeWidth="1.7" />
+          </svg>
         </button>
-      </div>
-      {moving && (
-        <RangePicker
-          quran={quran}
-          mode="start"
-          near={b.v}
-          title="انقلها إلى آية أخرى"
-          onPick={(v) => (moveBookmark(b.id, v), setMoving(false))}
-          onClose={() => setMoving(false)}
-        />
+      </header>
+
+      {settings && (
+        <section className="bmdetail__settings" aria-label="إعدادات العلامة">
+          <BookmarkForm key={b.id} initial={b} submitLabel="حفظ" onSubmit={save} onCancel={() => (setSettings(false), setConfirm(null))}>
+            {confirm?.kind === 'single' && (
+              <p className="bmdetail__confirm" role="alert">
+                ستصير العلامة متنقّلة، فتبقى آخر آية وُضعت عليها وحدها وتُزال {toArabicDigits(b.verses.length - 1)} من آياتها. اضغط «حفظ» مرة أخرى للتأكيد.
+              </p>
+            )}
+          </BookmarkForm>
+          <div className="bmdetail__danger">
+            {confirm?.kind === 'delete' ? (
+              <>
+                <span>حذف العلامة وكل آياتها؟</span>
+                <button type="button" className="bmdetail__link bmdetail__link--danger" onClick={remove}>
+                  نعم، احذفها
+                </button>
+                <button type="button" className="bmdetail__link" onClick={() => setConfirm(null)}>
+                  لا
+                </button>
+              </>
+            ) : (
+              <button type="button" className="bmdetail__link bmdetail__link--danger" onClick={remove}>
+                حذف العلامة
+              </button>
+            )}
+          </div>
+        </section>
       )}
-    </li>
+
+      {verses.length ? (
+        <ul className="sidemenu__list">
+          {verses.map((v) => (
+            <li key={v} className="sidemenu__row">
+              <button type="button" className="sidemenu__rowMain" onClick={() => onGoto(v)}>
+                <span className="sidemenu__rowLabel">{verseLabel(quran, [v])}</span>
+                <span className="sidemenu__rowText">{quran.verses[v].t}</span>
+              </button>
+              <div className="sidemenu__rowActions">
+                <button type="button" aria-label={`إزالة ${verseLabel(quran, [v])} من العلامة`} onClick={() => unplaceBookmark(b.id, v)}>
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="sidemenu__empty">لا آيات في هذه العلامة. اضغط ضغطًا مطوّلًا على آية ثم «علامة» لتضعها عليها.</p>
+      )}
+    </div>
   );
 }
 
@@ -319,14 +379,6 @@ function TrashIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function MoveIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M8 7l4-4 4 4M12 3v12M8 17l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

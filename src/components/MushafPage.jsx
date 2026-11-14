@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef } from 'react';
 import { pageFontClass } from '../lib/qcfFonts.js';
 import { weekMap } from '../lib/weeks.js';
-import { BOOKMARK_COLORS } from '../lib/userdata.js';
+import { bookmarkShades } from '../lib/userdata.js';
 import { rubStarts } from '../lib/rubs.js';
 import './MushafPage.css';
 
@@ -20,7 +20,7 @@ const OPENING_HEADER_ROW = OPENING_TEXT_ROW - 1;
   الجارية تلاوتها، وإخفات ما خارج النطاق المحدد، والضغط المطوّل على الآية.
 */
 // marks: ما يُرسم فوق الآيات من بيانات المستخدم —
-//   notes { آية: نص }، bookmarks [{ v, color }]، range [أول، آخر] (يُخفت ما خارجه)،
+//   notes { آية: نص }، bookmarks قائمة العلامات (تُظلَّل الآية بلون آخرها وضعًا)، range [أول، آخر] (يُخفت ما خارجه)،
 //   selected الآية المضغوط عليها ضغطًا مطوّلًا، playing الآية الجاري تلاوتها،
 //   flash الآية المنتقَل إليها من البحث (تمييز مؤقت يتلاشى)،
 //   rubFlash { verses: [أول آية في كل ربع], n } الأرباع التي يومض موضع بدايتها (src/lib/rubs.js)
@@ -29,7 +29,7 @@ function MushafPage({ quran, page, fontSize, width, height, shortLines, marks })
   const glyphs = quran.qcf.pages[page - 1];
   const opening = page <= 2;
   let row = OPENING_TEXT_ROW;
-  const bookmarkOf = new Map((marks?.bookmarks ?? []).map((b) => [b.v, b.color]));
+  const bookmarkOf = bookmarkShades(marks?.bookmarks);
 
   // الجوال الأفقي: الصفحة تُمرَّر رأسيًّا داخل ورقتها، فتُحضر الآية المميَّزة إلى منظر العين
   const ref = useRef(null);
@@ -133,17 +133,20 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
       {glyphs.k.map(([v, code], i) => {
         const isEnd = endsHere.has(v) && lastIndexOf.get(v) === i;
         const note = isEnd && marks?.notes?.[v];
-        const bookmark = isEnd ? bookmarkOf.get(v) : undefined;
+        // الآية المعلّمة (٢٠٢٦-١١-١٤): كلماتها كلها مظلَّلة بلون آخر علامة وُضعت عليها
+        const bookmark = bookmarkOf.get(v);
         let cls = 'w';
         const week = weeks.shade(v);
         if (week) cls += ` w--week w--week-${week}`;
+        if (bookmark) cls += ' w--mark';
         if (outside(v)) cls += ' w--out';
         if (marks?.selected === v) cls += ' w--selected';
         else if (marks?.flash === v) cls += ' w--flash';
         else if (marks?.playing === v) cls += ' w--playing';
-        // الآية ذات العلامة أو الملاحظة (بطلب صاحب المشروع): علامة الآية ورقمها كما هما؛
-        // الملاحظة دفتر ملاحظات صغير أعلى الدائرة يمينًا، والعلامة رمز شريطتها بلونها أعلاها يسارًا
-        const marked = bookmark !== undefined || note;
+        // الآية ذات الملاحظة (بطلب صاحب المشروع): علامة الآية ورقمها كما هما، ودفتر ملاحظات صغير أعلى
+        // الدائرة يمينًا. (وأُلغيت شريطة العلامة المرجعية ٢٠٢٦-١١-١٤؛ العلامة تظليل الآية بلونها)
+        const marked = note;
+        const markStyle = bookmark ? { '--mark': bookmark } : undefined;
         // أول كلمة في الربع: علامة ۞ رمز مستقل أول رموزها في خط الصفحة (٢٠٢٦-١١-١٣)، فتُفصل عنها
         // لتتلوّن وحدها بلون التطبيق عند الوصول إلى الصفحة: العلامة الأصلية نفسها، بلا نسخة ثانية
         const rub = rubs.has(v) && startsHere.has(v) && firstIndexOf.get(v) === i && quran.verses[v].t[0] === '۞';
@@ -151,7 +154,7 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
           const flashing = marks?.rubFlash?.verses.includes(v);
           const mark = code.slice(0, 1);
           return (
-            <span key={i} className={cls} data-v={v} aria-hidden="true">
+            <span key={i} className={cls} style={markStyle} data-v={v} aria-hidden="true">
               <span>
                 <span key={flashing ? `f${marks.rubFlash.n}` : 'r'} className={`w__rub${flashing ? ' w__rub--flash' : ''}`}>
                   {mark}
@@ -162,15 +165,10 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
           );
         }
         return (
-          <span key={i} className={cls} data-v={v} aria-hidden="true">
+          <span key={i} className={cls} style={markStyle} data-v={v} aria-hidden="true">
             {marked ? (
               <span className="w__end">
                 {code}
-                {bookmark !== undefined && (
-                  <svg viewBox="0 0 12 16" className="w__ribbon" style={{ color: BOOKMARK_COLORS[bookmark] }}>
-                    <path d="M1.5 1h9v14L6 11.4 1.5 15Z" fill="currentColor" />
-                  </svg>
-                )}
                 {note && (
                   <svg viewBox="0 0 12 14" className="w__notebook">
                     <rect x="1" y="0.5" width="10" height="13" rx="1.6" fill="currentColor" />

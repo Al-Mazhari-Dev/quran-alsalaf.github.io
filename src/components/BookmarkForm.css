@@ -1,0 +1,131 @@
+/* إعدادات العلامة المرجعية: الاسم، والنوع، واللون، والمعاينة (BookmarkForm.jsx) */
+.bmform {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.bmform__field {
+  display: grid;
+  gap: 6px;
+}
+
+.bmform__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.bmform__input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+}
+
+.bmform__types {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bmform__types button {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: start;
+  white-space: normal;
+}
+
+.bmform__types button[aria-checked='true'] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--accent-soft);
+}
+
+.bmform__types strong {
+  font-size: var(--text-sm);
+}
+
+.bmform__types small {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+/* الألوان: كل عمود لون أساسي، ودرجاته من الفاتح (أعلى) إلى الغامق (أسفل) */
+.bmform__palette {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.bmform__swatch {
+  aspect-ratio: 1;
+  min-width: 0;
+  max-width: 40px;
+  width: 100%;
+  justify-self: center;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 0.12);
+}
+
+.bmform__swatch[aria-checked='true'] {
+  outline: 2.5px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* المعاينة: آية مظلَّلة باللون المختار كما في المصحف، على خلفية القراءة نفسها */
+.bmform__preview {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Amiri', serif;
+  font-size: 1.35rem;
+  line-height: 2;
+  text-align: center;
+}
+
+.bmform__preview span {
+  padding: 2px 4px;
+  background: color-mix(in srgb, var(--mark) var(--mark-k, 34%), transparent);
+}
+
+.bmform__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bmform__submit,
+.bmform__cancel {
+  padding: 8px 22px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.bmform__submit {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.bmform__submit:disabled {
+  opacity: 0.45;
+}
+
+.bmform__cancel {
+  background: var(--surface-2);
+  color: var(--ink);
+}
