@@ -3,7 +3,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as U from '../../src/lib/userdata.js';
 import { readLastPage, saveLastPage } from '../../src/lib/position.js';
-import { READ_SPEED_DEFAULT, readReadingSpeed, readWeeksTint, saveReadingSpeed, setWeeksTint } from '../../src/lib/settings.js';
+import {
+  READ_SPEED_DEFAULT,
+  READ_SPEED_MAX,
+  READ_SPEED_MIN,
+  ratioToSpeed,
+  readReadingSpeed,
+  readWeeksTint,
+  saveReadingSpeed,
+  setWeeksTint,
+  speedToRatio,
+  stepSpeed,
+} from '../../src/lib/settings.js';
 import { addSearchHistory, readSearchHistory, removeSearchHistory } from '../../src/lib/searchHistory.js';
 import { normalizeArabic, search } from '../../src/lib/search.js';
 import { readTafsirSource, saveTafsirSource } from '../../src/lib/study.js';
@@ -173,12 +184,51 @@ describe('آخر صفحة', () => {
 });
 
 describe('إعدادات أخرى', () => {
-  it('سرعة وضع القراءة: تُحفظ، وما خرج عن ٢–٣٠ يعود للافتراضي', () => {
+  it('سرعة وضع القراءة: تُحفظ، وما خرج عن ٢–٦٠ يعود للافتراضي', () => {
     expect(readReadingSpeed()).toBe(READ_SPEED_DEFAULT);
     saveReadingSpeed(12);
     expect(readReadingSpeed()).toBe(12);
+    // ما فوق ٣٠ صار مقبولًا (أقصاها ضوعف إلى ٦٠)
+    saveReadingSpeed(45);
+    expect(readReadingSpeed()).toBe(45);
+    saveReadingSpeed(60);
+    expect(readReadingSpeed()).toBe(60);
     saveReadingSpeed(100);
     expect(readReadingSpeed()).toBe(READ_SPEED_DEFAULT);
+    saveReadingSpeed(1);
+    expect(readReadingSpeed()).toBe(READ_SPEED_DEFAULT);
+  });
+
+  it('شريط السرعة متدرّج: أبطؤه ٢ وأسرعه ٦٠، ونصفه البطيء للسرعات ٢–١٥', () => {
+    expect(READ_SPEED_MIN).toBe(2);
+    expect(READ_SPEED_MAX).toBe(60);
+    expect(ratioToSpeed(0)).toBe(2);
+    expect(ratioToSpeed(1)).toBe(60);
+    expect(ratioToSpeed(0.5)).toBe(15);
+    expect(speedToRatio(2)).toBe(0);
+    expect(speedToRatio(60)).toBe(1);
+    expect(speedToRatio(15)).toBe(0.5);
+    // ما خرج عن الشريط يُقصّ إلى طرفيه
+    expect(ratioToSpeed(-1)).toBe(2);
+    expect(ratioToSpeed(2)).toBe(60);
+    // ذهابًا وإيابًا: كل سرعة على الشريط تعود كما هي (أنصاف الأسطر في البطيء، والأسطر في السريع)
+    for (let v = 2; v <= 15; v += 0.5) expect(ratioToSpeed(speedToRatio(v))).toBe(v);
+    for (let v = 15; v <= 60; v += 1) expect(ratioToSpeed(speedToRatio(v))).toBe(v);
+    // دقة البطيء لم تقلّ: المدى ٢–١٠ يأخذ من الشريط أكثر مما كان في الشريط المتساوي ٢–٣٠
+    expect(speedToRatio(10)).toBeGreaterThan((10 - 2) / (30 - 2));
+    // يزداد كلما زادت السرعة
+    for (let v = 2; v < 60; v += 0.5) expect(speedToRatio(v + 0.5)).toBeGreaterThan(speedToRatio(v));
+  });
+
+  it('أسهم لوحة المفاتيح: سطر في النصف البطيء، وثلاثة في السريع، في حدود ٢–٦٠', () => {
+    expect(stepSpeed(8, 1)).toBe(9);
+    expect(stepSpeed(8, -1)).toBe(7);
+    expect(stepSpeed(15, 1)).toBe(18);
+    expect(stepSpeed(18, -1)).toBe(15);
+    expect(stepSpeed(15, -1)).toBe(14);
+    expect(stepSpeed(2, -1)).toBe(2);
+    expect(stepSpeed(59, 1)).toBe(60);
+    expect(stepSpeed(60, 1)).toBe(60);
   });
 
   it('تمييز مقررات الأسابيع ملغى افتراضيًّا ويُحفظ', () => {

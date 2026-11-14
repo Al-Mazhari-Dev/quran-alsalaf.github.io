@@ -1,0 +1,73 @@
+/* صفحة «وضع القراءة» داخل لوحة الإعدادات (ReadingInfo.jsx)، على نسق «عن التطبيق» */
+.readinfo {
+  max-width: 480px;
+  margin: 8px auto 0;
+  font-size: var(--text-sm);
+  line-height: 2;
+  color: var(--ink);
+}
+
+.readinfo__lead {
+  margin: 4px 0 14px;
+}
+
+.readinfo__list {
+  margin: 0 0 22px;
+  padding: 14px 16px;
+  list-style: none;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: var(--text-xs);
+  line-height: 1.9;
+  color: var(--ink-muted);
+}
+
+.readinfo__list li {
+  position: relative;
+  padding-inline-start: 16px;
+}
+
+.readinfo__list li + li {
+  margin-top: 6px;
+}
+
+/* نقطة بلون التطبيق أول كل سطر */
+.readinfo__list li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 2px;
+  top: 0.8em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.readinfo__start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.readinfo__start svg {
+  width: 20px;
+  height: 20px;
+}
+
+.readinfo__start:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}

@@ -41,30 +41,39 @@ test.describe('الجوال أفقيًّا', () => {
 });
 
 // ---------- شريط سرعة وضع القراءة ----------
-test('شريط السرعة: النقر يمينه أبطأ ويساره أسرع، والأسهم، والحفظ، وأثرها في التمرير', async ({ page }) => {
+test('شريط السرعة (٢–٦٠ متدرّج): النقر يمينه أبطأ ويساره أسرع، والأسهم، والحفظ، وأثرها في التمرير', async ({ page }) => {
   await openApp(page, { 'hq.page': '5' });
   await clickTopbar(page, 'الإعدادات');
-  await page.locator('.settings').getByRole('button', { name: 'وضع القراءة' }).click();
+  await page.locator('.settings').getByRole('button', { name: 'وضع القراءة', exact: true }).click();
+  await page.locator('.settings').getByRole('button', { name: 'ابدأ وضع القراءة' }).click();
   const slider = page.getByRole('slider', { name: 'سرعة التمرير بالأسطر في الدقيقة' });
   await expect(slider).toHaveAttribute('aria-valuenow', '8');
   const box = await slider.boundingBox();
   const y = box.y + box.height / 2;
 
-  // أقصى اليسار: أسرع (٣٠)، وأقصى اليمين: أبطأ (٢)، والمنتصف نحو ١٦
+  await expect(slider).toHaveAttribute('aria-valuemax', '60');
+  await expect(slider).toHaveAttribute('aria-valuemin', '2');
+  // أقصى اليسار: أسرع (٦٠، ضعف أقصى السرعة السابقة ٣٠)، وأقصى اليمين: أبطأ (٢ كما كان)
   await page.mouse.click(box.x + 1, y);
-  await expect(slider).toHaveAttribute('aria-valuenow', '30');
+  await expect(slider).toHaveAttribute('aria-valuenow', '60');
   await page.mouse.click(box.x + box.width - 1, y);
   await expect(slider).toHaveAttribute('aria-valuenow', '2');
+  // متدرّج: المنتصف ١٥، فالنصف الأيمن كله للسرعات البطيئة ٢–١٥، وثلث الشريط من اليسار نحو ٣٠
   await page.mouse.click(box.x + box.width / 2, y);
-  expect(Number(await slider.getAttribute('aria-valuenow'))).toBeCloseTo(16, 0);
+  expect(Math.abs(Number(await slider.getAttribute('aria-valuenow')) - 15)).toBeLessThanOrEqual(1);
+  await page.mouse.click(box.x + box.width / 3, y);
+  expect(Math.abs(Number(await slider.getAttribute('aria-valuenow')) - 30)).toBeLessThanOrEqual(2);
   // سحب المقبض
   await page.mouse.move(box.x + box.width - 2, y);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width * 0.75, y, { steps: 5 });
   await page.mouse.up();
-  expect(Number(await slider.getAttribute('aria-valuenow'))).toBeCloseTo(9, 0);
+  // ربع الشريط من اليمين: نحو ٨٫٥ (كان نحو ٩ في الشريط المتساوي ٢–٣٠، فدقة البطيء لم تقلّ)
+  const dragged = Number(await slider.getAttribute('aria-valuenow'));
+  expect(dragged).toBeGreaterThanOrEqual(8);
+  expect(dragged).toBeLessThanOrEqual(9);
 
-  // لوحة المفاتيح: الأيسر يسرّع والأيمن يبطئ، في حدود ٢–٣٠
+  // لوحة المفاتيح: الأيسر يسرّع والأيمن يبطئ (سطرًا في النصف البطيء)
   await slider.focus();
   const before = Number(await slider.getAttribute('aria-valuenow'));
   await page.keyboard.press('ArrowLeft');
@@ -74,7 +83,7 @@ test('شريط السرعة: النقر يمينه أبطأ ويساره أسر�
   await expect(slider).toHaveAttribute('aria-valuenow', String(before - 1));
   expect(await page.evaluate(() => Number(localStorage.getItem('hq.readSpeed')))).toBe(before - 1);
 
-  // أثرها: سرعة ٣٠ أسرع بوضوح من ٢
+  // أثرها: سرعة ٦٠ أسرع بوضوح من ٢
   const flow = page.locator('.flow');
   const rate = async (speedX) => {
     await page.mouse.click(speedX, y);
@@ -92,7 +101,8 @@ test('شريط السرعة: النقر يمينه أبطأ ويساره أسر�
   // تبقى للمرة القادمة
   await page.getByRole('button', { name: 'الخروج من وضع القراءة' }).click();
   await clickTopbar(page, 'الإعدادات');
-  await page.locator('.settings').getByRole('button', { name: 'وضع القراءة' }).click();
+  await page.locator('.settings').getByRole('button', { name: 'وضع القراءة', exact: true }).click();
+  await page.locator('.settings').getByRole('button', { name: 'ابدأ وضع القراءة' }).click();
   await expect(slider).toHaveAttribute('aria-valuenow', '2');
 });
 
