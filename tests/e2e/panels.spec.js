@@ -4,6 +4,11 @@ import { clickTopbar, isLaptop, openApp, savedPage, shownPages, waitMushaf } fro
 
 const side = (page) => page.locator('.sidemenu');
 const settings = (page) => page.locator('.settings');
+// الدخول إلى وضع القراءة: سطره في الإعدادات يفتح صفحة شرحه، وزرّها يبدأ الوضع
+const startReading = async (page) => {
+  await settings(page).getByRole('button', { name: 'وضع القراءة', exact: true }).click();
+  await settings(page).getByRole('button', { name: 'ابدأ وضع القراءة' }).click();
+};
 const bothClosed = async (page) => {
   await expect(side(page)).not.toHaveClass(/sidemenu--open/);
   await expect(settings(page)).not.toHaveClass(/settings--open/);
@@ -73,6 +78,56 @@ test('«عن التطبيق» صفحة فرعية: الرجوع وEsc يعودا
   await expect(settings(page)).toHaveClass(/settings--open/);
   await page.goBack();
   await bothClosed(page);
+});
+
+test('«وضع القراءة» في الإعدادات يفتح صفحة شرحه داخل اللوحة، لا الوضع نفسه', async ({ page }) => {
+  await clickTopbar(page, 'الإعدادات');
+  await settings(page).getByRole('button', { name: 'وضع القراءة', exact: true }).click();
+  // صفحة فرعية داخل اللوحة نفسها (لا صفحة كاملة ولا نافذة عائمة)، والوضع لم يبدأ
+  const sub = settings(page).locator('.settings__page--in');
+  await expect(sub).toBeVisible();
+  await expect(sub.getByRole('heading', { name: 'وضع القراءة' })).toBeVisible();
+  await expect(sub).toContainText('تنزل صفحات المصحف وحدها');
+  await expect(page.locator('.reading')).toHaveCount(0);
+  // تستقر بعد انزلاقها فوق اللوحة نفسها، بموضعها وعرضها
+  const offset = async () => {
+    const card = await settings(page).locator('.settings__card').boundingBox();
+    const subBox = await sub.boundingBox();
+    return Math.max(Math.abs(subBox.x - card.x), Math.abs(subBox.width - card.width));
+  };
+  await expect.poll(offset).toBeLessThan(2);
+
+  // سهم الرجوع وEsc وزرّ الرجوع في المتصفح تعود إلى الإعدادات
+  await sub.getByRole('button', { name: 'رجوع' }).click();
+  await expect(settings(page).locator('.settings__page--in')).toHaveCount(0);
+  await expect(settings(page)).toHaveClass(/settings--open/);
+  await settings(page).getByRole('button', { name: 'وضع القراءة', exact: true }).click();
+  await expect(settings(page).locator('.settings__page--in')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(settings(page).locator('.settings__page--in')).toHaveCount(0);
+  await settings(page).getByRole('button', { name: 'وضع القراءة', exact: true }).click();
+  await expect(settings(page).locator('.settings__page--in')).toBeVisible();
+  await page.goBack();
+  await expect(settings(page).locator('.settings__page--in')).toHaveCount(0);
+  await expect(settings(page)).toHaveClass(/settings--open/);
+
+  // ✕ يغلق اللوحة كلها
+  await settings(page).getByRole('button', { name: 'وضع القراءة', exact: true }).click();
+  await settings(page).locator('.settings__page--in').getByRole('button', { name: 'إغلاق' }).click();
+  await bothClosed(page);
+  await expect(page.locator('.reading')).toHaveCount(0);
+});
+
+test('«ابدأ وضع القراءة» يغلق الإعدادات ويبدأ الوضع من الصفحة الحالية، ولا يبقى في السجل', async ({ page }) => {
+  await clickTopbar(page, 'الإعدادات');
+  await startReading(page);
+  await expect(page.locator('.reading')).toBeVisible();
+  await bothClosed(page);
+  await expect(page.locator('.flow__page[aria-label="الصفحة ٥"]')).toBeInViewport();
+  await expect.poll(() => page.evaluate(() => window.history.state?.hqSettings ?? null)).toBeNull();
+  await page.waitForTimeout(300);
+  await expect(settings(page)).not.toHaveClass(/settings--open/);
+  await expect(page.locator('.reading')).toBeVisible();
 });
 
 test('القائمة والإعدادات لا تُفتحان معًا', async ({ page }) => {
@@ -160,7 +215,7 @@ test('تمييز مقررات الأسابيع يُفعَّل ويُحفظ', asy
 
 test('وضع القراءة: الدخول والإيقاف والخروج على الصفحة الصحيحة', async ({ page }, testInfo) => {
   await clickTopbar(page, 'الإعدادات');
-  await settings(page).getByRole('button', { name: 'وضع القراءة' }).click();
+  await startReading(page);
   await expect(page.locator('.reading')).toBeVisible();
   await expect(settings(page)).not.toHaveClass(/settings--open/);
   const bar = page.getByRole('toolbar', { name: 'التحكم في وضع القراءة' });
@@ -186,7 +241,7 @@ test('وضع القراءة: الدخول والإيقاف والخروج على
 
 test('وضع القراءة يتقدم تلقائيًّا ويتوقف بالإيقاف', async ({ page }) => {
   await clickTopbar(page, 'الإعدادات');
-  await settings(page).getByRole('button', { name: 'وضع القراءة' }).click();
+  await startReading(page);
   const flow = page.locator('.flow');
   const top = () => flow.evaluate((el) => el.scrollTop);
   const t0 = await top();

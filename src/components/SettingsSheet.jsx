@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ACCENTS, BACKGROUNDS, readAppearance, setAccent, setBackground } from '../lib/appearance.js';
 import { readWeeksTint, setWeeksTint } from '../lib/settings.js';
 import AboutContent from './AboutPage.jsx';
+import ReadingInfo from './ReadingInfo.jsx';
 import './SettingsSheet.css';
 import { useLayer } from '../lib/layers.js';
 
@@ -11,7 +12,8 @@ import { useLayer } from '../lib/layers.js';
   والعلامات)، واليسار للإعدادات والميزات.
   تُغلق بزرّ ✕، وبالنقر خارجها، وبسحبها نحو اليسار (إصبعًا أو فأرة)، وبـEsc، وبزرّ الرجوع في أندرويد
   (فتحها يضيف خطوة إلى سجل المتصفح — App.jsx).
-  «عن التطبيق» صفحة فرعية داخل اللوحة نفسها بسهم رجوع.
+  «عن التطبيق» و«وضع القراءة» صفحتان فرعيتان داخل اللوحة نفسها بسهم رجوع (SubPage أدناه)؛ وفي صفحة
+  «وضع القراءة» شرحه وزرّ يبدأه (٢٠٢٦-١١-١٤، كان السطر يبدأ الوضع مباشرة).
 
   إضافة إعداد أو ميزة جديدة: سطر في قسمه بأحد الأسطر الجاهزة أدناه
   (SegmentRow للاختيار من خيارات، SwatchRow للاختيار من ألوان، SwitchRow للتشغيل والإيقاف،
@@ -81,7 +83,7 @@ export default function SettingsSheet({ open, panel, page = 'main', onPage, onCl
             </Section>
 
             <Section title="القراءة">
-              <LinkRow label="وضع القراءة" onClick={onStartReading} />
+              <LinkRow label="وضع القراءة" onClick={() => onPage('reading')} />
               <SwitchRow label="تمييز مقررات الأسابيع" checked={weeks} onChange={toggleWeeks} />
             </Section>
 
@@ -91,22 +93,31 @@ export default function SettingsSheet({ open, panel, page = 'main', onPage, onCl
           </div>
         </div>
 
-        {/* الصفحة الفرعية تدخل من اليسار فوق الإعدادات، وسهم الرجوع في أولها (يمينًا) */}
-        <div className={`settings__page settings__page--sub${page === 'about' ? ' settings__page--in' : ''}`} inert={page === 'about' ? undefined : ''}>
-          <header className="settings__head">
-            <button className="settings__back" type="button" onClick={() => onPage('main')} aria-label="رجوع">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <h2>عن التطبيق</h2>
-            <CloseButton onClick={onClose} />
-          </header>
-          <div className="settings__body">
-            <AboutContent />
-          </div>
-        </div>
+        <SubPage title="وضع القراءة" shown={page === 'reading'} onBack={() => onPage('main')} onClose={onClose}>
+          <ReadingInfo onStart={onStartReading} />
+        </SubPage>
+        <SubPage title="عن التطبيق" shown={page === 'about'} onBack={() => onPage('main')} onClose={onClose}>
+          <AboutContent />
+        </SubPage>
       </section>
+    </div>
+  );
+}
+
+// صفحة فرعية تدخل من اليسار فوق الإعدادات، وسهم الرجوع في أولها (يمينًا)
+function SubPage({ title, shown, onBack, onClose, children }) {
+  return (
+    <div className={`settings__page settings__page--sub${shown ? ' settings__page--in' : ''}`} inert={shown ? undefined : ''}>
+      <header className="settings__head">
+        <button className="settings__back" type="button" onClick={onBack} aria-label="رجوع">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <h2>{title}</h2>
+        <CloseButton onClick={onClose} />
+      </header>
+      <div className="settings__body">{children}</div>
     </div>
   );
 }

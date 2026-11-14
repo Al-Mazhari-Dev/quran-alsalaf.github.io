@@ -5,12 +5,20 @@ import { SURA_NAMES_VOWELED } from '../data/suraNamesVoweled.js';
 import { pageLayout } from '../lib/layout.js';
 import { prefetchPageFonts, usePageFont } from '../lib/qcfFonts.js';
 import { FIRST_PAGE, LAST_PAGE } from '../lib/position.js';
-import { READ_SPEED_MAX, READ_SPEED_MIN, readReadingSpeed, saveReadingSpeed } from '../lib/settings.js';
+import {
+  READ_SPEED_MAX,
+  READ_SPEED_MIN,
+  ratioToSpeed,
+  readReadingSpeed,
+  saveReadingSpeed,
+  speedToRatio,
+  stepSpeed,
+} from '../lib/settings.js';
 import './ReadingMode.css';
 
 /*
   وضع القراءة (٢٠٢٦-١٠-١٨): المصحف تدفّقٌ رأسي متصل تنزل فيه الصفحات تلقائيًّا بسرعة يختارها
-  المستخدم، فيقرأ دون أن يقلّب بيده.
+  المستخدم، فيقرأ دون أن يقلّب بيده. يُدخَل إليه من صفحة «وضع القراءة» في الإعدادات (ReadingInfo.jsx).
 
   • كل صفحة تحتفظ بتخطيطها الأصلي (١٥ سطرًا وكسر السطر كما في المطبوع)، والخط يُحسب من العرض
     وحده كما في الجوال الأفقي (src/lib/layout.js)، ويعمل الوضع في الاتجاهين.
@@ -315,15 +323,16 @@ const FlowPage = memo(function FlowPage({ quran, page, top, layout, marks }) {
 
 // شريط السرعة بأسلوب شريط التقدم في يوتيوب: خط رفيع ومقبض يظهر ويكبر عند اللمس، ومنطقة لمس
 // أعرض من الخط المرئي. اتجاهه من اليمين إلى اليسار: اليمين بطيء واليسار سريع، والتعبئة من اليمين.
+// متدرّج (src/lib/settings.js): نصفه الأيمن للسرعات البطيئة ٢–١٥، ونصفه الأيسر للسريعة ١٥–٦٠.
 function SpeedSlider({ value, min, max, onChange }) {
   const ref = useRef(null);
   const [active, setActive] = useState(false);
-  const ratio = (value - min) / (max - min);
+  const ratio = speedToRatio(value);
 
   const setFromX = (clientX) => {
     const r = ref.current.getBoundingClientRect();
     const t = clamp((r.right - clientX) / r.width, 0, 1);
-    onChange(Math.round((min + t * (max - min)) * 2) / 2); // بخطوات نصف سطر
+    onChange(ratioToSpeed(t));
   };
   const onDown = (e) => {
     try {
@@ -340,10 +349,10 @@ function SpeedSlider({ value, min, max, onChange }) {
   const onUp = () => setActive(false);
   const onKey = (e) => {
     // السهم الأيمن يُبطئ والأيسر يُسرّع، موافقةً لاتجاه الشريط
-    const step = e.key === 'ArrowLeft' ? 1 : e.key === 'ArrowRight' ? -1 : 0;
-    if (!step) return;
+    const dir = e.key === 'ArrowLeft' ? 1 : e.key === 'ArrowRight' ? -1 : 0;
+    if (!dir) return;
     e.preventDefault();
-    onChange(clamp(value + step, min, max));
+    onChange(stepSpeed(value, dir));
   };
 
   return (
