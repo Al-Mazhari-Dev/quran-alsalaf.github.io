@@ -2,7 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { toArabicDigits } from '../data/quran.js';
 import { FOREVER } from '../lib/player.js';
 import { copyVerse, loadTafsir, memoIndex, muyassarPlain, verseLabel } from '../lib/study.js';
-import { copyText, readNotes, setNote, toggleBookmark, bookmarkName, MAX_BOOKMARKS, readBookmarks } from '../lib/userdata.js';
+import {
+  bookmarksAt,
+  copyText,
+  createBookmark,
+  defaultBookmarkColor,
+  defaultBookmarkName,
+  placeBookmark,
+  readNotes,
+  setNote,
+  unplaceBookmark,
+  useUserData,
+} from '../lib/userdata.js';
+import BookmarkForm, { bookmarkMeta, typeName } from './BookmarkForm.jsx';
 import { CopyIcon, NO_ACTIONS, NO_MEANINGS, QuotedText, UNAVAILABLE, VerseCard } from './StudySheet.jsx';
 import './VerseMenu.css';
 import { useLayer } from '../lib/layers.js';
@@ -18,7 +30,9 @@ import { useLayer } from '../lib/layers.js';
   • تفسير/معاني/عمل ⇐ بطاقة عائمة أعلى الشاشة بمحتوى هذه الآية وحدها، فيها زرّا نسخ وإغلاق.
     والتفسير يعرض التفسيرين معًا: المختصر ثم الميسّر، ولكلٍّ زرّ نسخ بجانب عنوانه.
   • ملاحظة ⇐ كتابة ملاحظة الآية أو تعديلها (واحدة لكل آية).
-  • علامة ⇐ تُحوَّل الآية علامةً مرجعية فورًا بلا بطاقة وسيطة (أو تُزال إن كانت علامة).
+  • علامة ⇐ (٢٠٢٦-١١-١٤) تختفي المربعات ويظهر في المربع نفسه (بزرّ رجوع): «علامة جديدة» (اسم ولون
+    ونوع، فتُنشأ وتوضع على الآية)، ثم العلامات التي على الآية ولكلٍّ زرّ إزالة، ثم بقية العلامات:
+    الضغط على إحداها يضعها على الآية (والمتنقّلة تنتقل إليها) ويغلق المربع.
 */
 const ACTIONS = [
   { id: 'play', name: 'تشغيل', icon: 'M8 5.5v13l10.5-6.5L8 5.5Z' },
@@ -39,30 +53,22 @@ export default function VerseMenu({ quran, pressed, onClose, onToast, onPlay, on
   const { v } = pressed;
   // Esc يغلق المربع؛ وفي خيارات التشغيل يرجع إلى المربعات؛ وفي الملاحظة يحفظها أولًا كزرّ ✕ فيها
   const saveNote = useRef(null);
-  useLayer(() => (view === 'note' && saveNote.current ? saveNote.current() : view === 'play' ? setView('menu') : onClose()));
+  useLayer(() =>
+    view === 'note' && saveNote.current ? saveNote.current() : view === 'play' || view === 'bookmark' ? setView('menu') : onClose()
+  );
 
-  const choose = (id) => {
-    if (id === 'bookmark') {
-      const result = toggleBookmark(v);
-      if (result === 'full') onToast(`بلغت العلامات حدّها (${toArabicDigits(MAX_BOOKMARKS)})؛ احذف إحداها من القائمة الجانبية لتضيف غيرها.`);
-      else if (result === 'removed') onToast('أُزيلت العلامة عن الآية');
-      else {
-        const b = readBookmarks().find((x) => x.v === v);
-        onToast(`أُضيفت علامة: ${b?.name ?? bookmarkName(0)}`);
-      }
-      onClose();
-      return;
-    }
-    setView(id);
-  };
+  const boxed = view === 'menu' || view === 'play' || view === 'bookmark';
+  const sub = view === 'play' ? 'تشغيل الآية' : view === 'bookmark' ? 'علامة' : null;
 
   return (
     <div className="vmenu">
       <div className="vmenu__backdrop" onClick={onClose} />
-      {(view === 'menu' || view === 'play') && (
-        <VerseBox quran={quran} v={v} play={view === 'play'} onBack={() => setView('menu')} onClose={onClose}>
+      {boxed && (
+        <VerseBox quran={quran} v={v} sub={sub} onBack={() => setView('menu')} onClose={onClose}>
           {view === 'menu' ? (
-            <Tiles onChoose={choose} hasBookmark={readBookmarks().some((b) => b.v === v)} noPlay={noPlay} />
+            <Tiles onChoose={setView} noPlay={noPlay} />
+          ) : view === 'bookmark' ? (
+            <BookmarkChoices quran={quran} v={v} onToast={onToast} onDone={onClose} />
           ) : (
             <PlayChoices
               onAlone={(n) => {
@@ -91,21 +97,22 @@ const Icon = ({ d }) => (
   </svg>
 );
 
-// المربع العائم الكبير وسط الشاشة: اسم الآية وزرّ إغلاق، وفي خيارات التشغيل زرّ رجوع إلى المربعات
-function VerseBox({ quran, v, play, onBack, onClose, children }) {
+// المربع العائم الكبير وسط الشاشة: اسم الآية وزرّ إغلاق، وفي خيارات التشغيل والعلامة (sub) عنوانها
+// وزرّ رجوع إلى المربعات
+function VerseBox({ quran, v, sub, onBack, onClose, children }) {
   const verse = quran.verses[v];
   const name = `${quran.suras[verse.s - 1].name}: ${toArabicDigits(verse.a)}`;
   return (
-    <section className="vbox" role="dialog" aria-label={play ? `تشغيل ${name}` : name}>
+    <section className="vbox" role="dialog" aria-label={sub ? `${sub.split(' ')[0]} ${name}` : name}>
       <header className="vbox__head">
-        {play && (
+        {sub && (
           <button type="button" className="vcard__btn" onClick={onBack} aria-label="رجوع">
             <Icon d="M9 6l6 6-6 6" />
           </button>
         )}
         <div className="vbox__title">
-          <h2>{play ? 'تشغيل الآية' : name}</h2>
-          {play && <span>{name}</span>}
+          <h2>{sub ?? name}</h2>
+          {sub && <span>{name}</span>}
         </div>
         <button type="button" className="vcard__btn" onClick={onClose} aria-label="إغلاق">
           <Icon d="M6 6l12 12M18 6 6 18" />
@@ -117,15 +124,115 @@ function VerseBox({ quran, v, play, onBack, onClose, children }) {
 }
 
 // المربعات الكبيرة: لكلٍّ أيقونة وتسمية تحتها
-function Tiles({ onChoose, hasBookmark, noPlay }) {
+function Tiles({ onChoose, noPlay }) {
   return (
     <div className="vmenu__picker" role="menu">
       {ACTIONS.filter((a) => !(noPlay && a.id === 'play')).map((a) => (
         <button key={a.id} type="button" role="menuitem" onClick={() => onChoose(a.id)} className="vmenu__action">
           <Icon d={a.icon} />
-          <span className="vmenu__label">{a.id === 'bookmark' && hasBookmark ? 'إزالة' : a.name}</span>
+          <span className="vmenu__label">{a.name}</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+// اختيار العلامة للآية (٢٠٢٦-١١-١٤): علامة جديدة، ثم ما على الآية (بزرّ إزالة)، ثم بقية العلامات
+function BookmarkChoices({ quran, v, onToast, onDone }) {
+  const { bookmarks = [] } = useUserData();
+  const [creating, setCreating] = useState(false);
+  // إزالة علامة عن الآية بعد تأكيد (بطلب صاحب المشروع): رقم العلامة المسؤول عن إزالتها
+  const [unplacing, setUnplacing] = useState(null);
+  const here = bookmarksAt(bookmarks, v);
+  const others = bookmarks.filter((b) => !here.includes(b));
+
+  const place = (b) => {
+    const result = placeBookmark(b.id, v);
+    onToast(result === 'moved' ? `نُقلت علامة «${b.name}» إلى هذه الآية` : `وُضعت علامة «${b.name}»`);
+    onDone();
+  };
+
+  if (creating) {
+    return (
+      <div className="vmark">
+        <BookmarkForm
+          initial={{ name: defaultBookmarkName(bookmarks), color: defaultBookmarkColor(bookmarks), multi: false }}
+          submitLabel="إنشاء ووضعها على الآية"
+          onCancel={() => setCreating(false)}
+          onSubmit={(values) => {
+            createBookmark(values, v);
+            onToast(`وُضعت علامة «${values.name}»`);
+            onDone();
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="vmark">
+      <button type="button" className="vmark__new" onClick={() => setCreating(true)}>
+        <Icon d="M12 5v14M5 12h14" />
+        علامة جديدة
+      </button>
+
+      {here.length > 0 && (
+        <section className="vmark__group" aria-label="على هذه الآية">
+          <h3>على هذه الآية</h3>
+          <ul>
+            {here.map((b) => (
+              <li key={b.id} className={`vmark__row${unplacing === b.id ? ' vmark__row--ask' : ''}`}>
+                <span className="vmark__dot" style={{ background: b.color }} />
+                <span className="vmark__name">
+                  {b.name}
+                  <small>{typeName(b.multi)}</small>
+                </span>
+                <button type="button" className="vmark__remove" aria-label={`إزالة «${b.name}» عن الآية`} onClick={() => setUnplacing(b.id)}>
+                  <Icon d="M6 6l12 12M18 6 6 18" />
+                </button>
+                {unplacing === b.id && (
+                  <div className="vmark__ask" role="alert">
+                    <span>إزالة «{b.name}» عن الآية؟</span>
+                    <button
+                      type="button"
+                      className="vmark__yes"
+                      onClick={() => {
+                        unplaceBookmark(b.id, v);
+                        setUnplacing(null);
+                        onToast(`أُزيلت علامة «${b.name}» عن الآية`);
+                      }}
+                    >
+                      نعم، أزلها
+                    </button>
+                    <button type="button" className="vmark__no" onClick={() => setUnplacing(null)}>
+                      لا
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {others.length > 0 && (
+        <section className="vmark__group" aria-label="علاماتك">
+          <h3>{here.length ? 'علاماتك الأخرى' : 'علاماتك'}</h3>
+          <ul>
+            {others.map((b) => (
+              <li key={b.id}>
+                <button type="button" className="vmark__row vmark__pick" onClick={() => place(b)}>
+                  <span className="vmark__dot" style={{ background: b.color }} />
+                  <span className="vmark__name">
+                    {b.name}
+                    <small>{bookmarkMeta(quran, b)}</small>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

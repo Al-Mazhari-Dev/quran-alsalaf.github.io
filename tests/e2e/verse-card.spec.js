@@ -133,15 +133,3 @@ test('ملاحظة: إضافة وتعديل وحذف من البطاقة', async
   await expect(page.locator('.sheet--current .w__notebook')).toHaveCount(0);
 });
 
-test('علامة: تُضاف فورًا ثم تُزال من البطاقة نفسها', async ({ page }) => {
-  await longPress(page, 5);
-  await page.getByRole('menuitem', { name: 'علامة' }).click();
-  await expect(page.locator('.toast')).toContainText('أُضيفت علامة: الفاصل الأحمر');
-  await expect(page.locator('.sheet--current .w[data-v="5"] .w__ribbon')).toHaveCount(1);
-  expect((await stored(page, 'hq.bookmarks')).map((b) => b.v)).toEqual([5]);
-
-  await longPress(page, 5);
-  await page.getByRole('menuitem', { name: 'إزالة' }).click();
-  await expect(page.locator('.toast')).toHaveText('أُزيلت العلامة عن الآية');
-  expect(await stored(page, 'hq.bookmarks')).toEqual([]);
-});

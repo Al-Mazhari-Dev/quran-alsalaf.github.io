@@ -37,37 +37,112 @@ describe('الملاحظات', () => {
   });
 });
 
-describe('العلامات المرجعية', () => {
-  it('تُضاف بأول لون غير مستعمل واسمه، وتُزال بالضغط الثاني', () => {
-    expect(U.toggleBookmark(10)).toBe('added');
-    expect(U.toggleBookmark(20)).toBe('added');
-    expect(U.readBookmarks().map((b) => [b.v, b.color, b.name])).toEqual([
-      [10, 0, 'الفاصل الأحمر'],
-      [20, 1, 'الفاصل الأصفر'],
-    ]);
-    expect(U.toggleBookmark(10)).toBe('removed');
-    // اللون الأحمر صار متاحًا فيُعطى للتالية
-    U.toggleBookmark(30);
-    expect(U.readBookmarks().find((b) => b.v === 30).color).toBe(0);
+describe('العلامات المرجعية (بلا حدّ، ٢٠٢٦-١١-١٤)', () => {
+  const at = (id) => U.readBookmarks().find((b) => b.id === id);
+  const verses = (id) => at(id).verses.map((x) => x.v);
+
+  it('٤٠ لونًا: عشرة أساسية لكلٍّ أربع درجات، كلها مختلفة', () => {
+    const all = U.BOOKMARK_HUES.flatMap((h) => h.shades);
+    expect(all).toHaveLength(40);
+    expect(new Set(all).size).toBe(40);
+    expect(U.colorName(0, 0)).toBe('أحمر فاتح');
+    expect(U.colorName(0, U.BASE_SHADE)).toBe('أحمر');
   });
 
-  it('عشر على الأكثر', () => {
-    for (let i = 0; i < U.MAX_BOOKMARKS; i++) expect(U.toggleBookmark(i)).toBe('added');
-    expect(U.toggleBookmark(99)).toBe('full');
-    expect(U.readBookmarks()).toHaveLength(10);
-    expect(new Set(U.readBookmarks().map((b) => b.color)).size).toBe(10);
+  it('بلا حدّ لعددها: عشرون علامة وأكثر', () => {
+    for (let i = 0; i < 25; i++) U.createBookmark({ name: `ع${i}` }, i);
+    expect(U.readBookmarks()).toHaveLength(25);
+    expect(new Set(U.readBookmarks().map((b) => b.id)).size).toBe(25);
   });
 
-  it('إعادة تسمية (والاسم الفارغ يبقي القديم) ونقل وحذف', () => {
-    U.toggleBookmark(10);
-    const { id } = U.readBookmarks()[0];
-    U.renameBookmark(id, '  مراجعة  ');
-    expect(U.readBookmarks()[0].name).toBe('مراجعة');
-    U.renameBookmark(id, '   ');
-    expect(U.readBookmarks()[0].name).toBe('مراجعة');
-    U.moveBookmark(id, 500);
-    expect(U.readBookmarks()[0].v).toBe(500);
+  it('الاسم واللون الافتراضيان: «علامة ١» وأول لون أساسي لم يُستعمل', () => {
+    expect(U.defaultBookmarkName([])).toBe('علامة ١');
+    const id = U.createBookmark({}, 3);
+    expect(at(id).name).toBe('علامة ١');
+    expect(at(id).color).toBe(U.BOOKMARK_HUES[0].shades[U.BASE_SHADE]);
+    expect(at(id).multi).toBe(false);
+    expect(U.defaultBookmarkName()).toBe('علامة ٢');
+    expect(U.defaultBookmarkColor()).toBe(U.BOOKMARK_HUES[1].shades[U.BASE_SHADE]);
+  });
+
+  it('المتنقّلة: في آية واحدة، ووضعها على أخرى ينقلها', () => {
+    const id = U.createBookmark({ name: 'وصلت هنا', multi: false }, 10);
+    expect(U.placeBookmark(id, 10)).toBe('placed');
+    expect(U.placeBookmark(id, 20)).toBe('moved');
+    expect(verses(id)).toEqual([20]);
+  });
+
+  it('المتعددة: تقبل أكثر من مئة آية ولا يزول منها شيء', () => {
+    const id = U.createBookmark({ name: 'أخطائي', multi: true }, 0);
+    for (let v = 1; v < 150; v++) expect(U.placeBookmark(id, v)).toBe('placed');
+    expect(verses(id)).toHaveLength(150);
+    U.placeBookmark(id, 5); // الآية نفسها مرة ثانية لا تتكرر
+    expect(verses(id)).toHaveLength(150);
+    U.unplaceBookmark(id, 5);
+    expect(verses(id)).toHaveLength(149);
+    expect(verses(id)).not.toContain(5);
+  });
+
+  it('علامتان على آية واحدة: يُظلَّل لون الأحدث، وبإزالتها يعود لون الأخرى', () => {
+    const red = '#c0392b';
+    const blue = '#2e7bc4';
+    const errors = U.createBookmark({ name: 'أخطائي', color: red, multi: true }, 7);
+    U.placeBookmark(errors, 8);
+    const here = U.createBookmark({ name: 'وصلت هنا', color: blue }, 7);
+    let list = U.readBookmarks();
+    expect(U.bookmarkShades(list).get(7)).toBe(blue);
+    expect(U.bookmarkShades(list).get(8)).toBe(red);
+    expect(U.bookmarksAt(list, 7).map((b) => b.name)).toEqual(['وصلت هنا', 'أخطائي']);
+    // نقل «وصلت هنا» يعيد لون «أخطائي» على الآية
+    U.placeBookmark(here, 30);
+    list = U.readBookmarks();
+    expect(U.bookmarkShades(list).get(7)).toBe(red);
+    expect(U.bookmarkShades(list).get(30)).toBe(blue);
+    // إعادة وضع «أخطائي» على آية هي عليها تجعلها الأحدث
+    U.placeBookmark(here, 8);
+    expect(U.bookmarkShades(U.readBookmarks()).get(8)).toBe(blue);
+    U.placeBookmark(errors, 8);
+    expect(U.bookmarkShades(U.readBookmarks()).get(8)).toBe(red);
+  });
+
+  it('تعديل الاسم واللون والنوع (والاسم الفارغ يبقي القديم)، والمتعددة إلى متنقّلة تبقي آخر آية', () => {
+    const id = U.createBookmark({ name: 'مراجعة', multi: true }, 50);
+    U.placeBookmark(id, 10);
+    U.placeBookmark(id, 90);
+    U.updateBookmark(id, { name: '  حفظ  ', color: '#1e5e1e' });
+    expect(at(id).name).toBe('حفظ');
+    expect(at(id).color).toBe('#1e5e1e');
+    U.updateBookmark(id, { name: '   ' });
+    expect(at(id).name).toBe('حفظ');
+    U.updateBookmark(id, { multi: false });
+    expect(at(id).multi).toBe(false);
+    expect(verses(id)).toEqual([90]);
     U.removeBookmark(id);
+    expect(U.readBookmarks()).toEqual([]);
+  });
+
+  it('العلامات القديمة (عشر بأرقام ألوان) تبقى متنقّلة باسمها ولونها وآيتها', () => {
+    localStorage.setItem(
+      'hq.bookmarks',
+      JSON.stringify([
+        { id: 1, v: 10, color: 0, name: 'الفاصل الأحمر' },
+        { id: 2, v: 20, color: 3, name: 'مراجعة' },
+      ])
+    );
+    expect(U.readBookmarks()).toEqual([
+      { id: 1, name: 'الفاصل الأحمر', color: '#c0392b', multi: false, verses: [{ v: 10, at: 1 }] },
+      { id: 2, name: 'مراجعة', color: '#2e7bc4', multi: false, verses: [{ v: 20, at: 2 }] },
+    ]);
+    // وتعمل كغيرها بعد التحويل، وتُحفظ بالشكل الجديد
+    U.placeBookmark(1, 99);
+    expect(raw('hq.bookmarks')[0].verses.map((x) => x.v)).toEqual([99]);
+    expect(raw('hq.bookmarks')[1].verses.map((x) => x.v)).toEqual([20]);
+  });
+
+  it('بيانات تالفة لا تُعطّل العلامات', () => {
+    localStorage.setItem('hq.bookmarks', '{bad');
+    expect(U.readBookmarks()).toEqual([]);
+    localStorage.setItem('hq.bookmarks', '{"a":1}');
     expect(U.readBookmarks()).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
-// البحث، والعلامات المرجعية والملاحظات من القائمة الجانبية: إضافة وتعديل ونقل وحذف
+// البحث، والملاحظات من القائمة الجانبية: إضافة وتعديل وحذف (والعلامات المرجعية في bookmarks.spec.js)
 import { test, expect } from '@playwright/test';
-import { QURAN, clickTopbar, longPress, openApp, pickVerse, shownPages, stored } from './helpers.js';
+import { QURAN, clickTopbar, longPress, openApp, shownPages, stored } from './helpers.js';
 
 const side = (page) => page.locator('.sidemenu');
 
@@ -183,58 +183,6 @@ test.describe('الجوال الأفقي', () => {
     await expect.poll(() => shownPages(page)).toContain(42);
     await expect(flashed(page).first()).toBeInViewport();
   });
-});
-
-test('العلامات المرجعية: إضافة، وإعادة تسمية، ونقل، والانتقال، وحذف', async ({ page }) => {
-  await openApp(page, { 'hq.page': '1' });
-  await longPress(page, 2);
-  await page.getByRole('menuitem', { name: 'علامة' }).click();
-  await longPress(page, 4);
-  await page.getByRole('menuitem', { name: 'علامة' }).click();
-  expect((await stored(page, 'hq.bookmarks')).map((b) => [b.v, b.color])).toEqual([[2, 0], [4, 1]]);
-
-  await clickTopbar(page, 'القائمة');
-  await side(page).getByRole('tab', { name: 'العلامات' }).click();
-  const rows = side(page).locator('.sidemenu__row');
-  await expect(rows).toHaveCount(2);
-  await expect(rows.first()).toContainText('الفاصل الأحمر');
-
-  // إعادة تسمية
-  await rows.first().getByRole('button', { name: 'إعادة تسمية العلامة' }).click();
-  await rows.first().locator('.sidemenu__input').fill('مراجعة');
-  await rows.first().getByRole('button', { name: 'حفظ' }).click();
-  await expect(rows.first()).toContainText('مراجعة');
-  expect((await stored(page, 'hq.bookmarks'))[0].name).toBe('مراجعة');
-
-  // نقل إلى آية أخرى (الكهف ١٠)
-  await rows.first().getByRole('button', { name: 'نقل العلامة إلى آية أخرى' }).click();
-  await page.locator('.rpick__sura[data-sura="18"] h3').scrollIntoViewIfNeeded();
-  const kahf10 = QURAN.verses.findIndex((x) => x.s === 18 && x.a === 10);
-  await pickVerse(page, kahf10);
-  expect((await stored(page, 'hq.bookmarks')).find((b) => b.name === 'مراجعة').v).toBe(kahf10);
-
-  // الانتقال: الضغط على العلامة ينقل إلى صفحتها ويغلق القائمة
-  await rows.filter({ hasText: 'مراجعة' }).locator('.sidemenu__rowMain').click();
-  await expect(side(page)).not.toHaveClass(/sidemenu--open/);
-  await expect.poll(() => shownPages(page)).toContain(294);
-  await expect(page.locator(`.sheet--current .w[data-v="${kahf10}"] .w__ribbon`)).toHaveCount(1);
-
-  // حذف
-  await clickTopbar(page, 'القائمة');
-  await side(page).getByRole('tab', { name: 'العلامات' }).click();
-  await rows.first().getByRole('button', { name: 'حذف العلامة' }).click();
-  await rows.first().getByRole('button', { name: 'حذف العلامة' }).click();
-  await expect(side(page).locator('.sidemenu__empty')).toBeVisible();
-  expect(await stored(page, 'hq.bookmarks')).toEqual([]);
-});
-
-test('العلامات حدّها عشر', async ({ page }) => {
-  const ten = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, v: 100 + i, color: i, name: `ع${i}` }));
-  await openApp(page, { 'hq.page': '1', 'hq.bookmarks': ten });
-  await longPress(page, 1);
-  await page.getByRole('menuitem', { name: 'علامة' }).click();
-  await expect(page.locator('.toast')).toContainText('بلغت العلامات حدّها');
-  expect(await stored(page, 'hq.bookmarks')).toHaveLength(10);
 });
 
 test('الملاحظات في القائمة الجانبية: تظهر بترتيب المصحف، وتُعدَّل وتُحذف', async ({ page }) => {

@@ -87,6 +87,21 @@
   opacity: 0.3;
 }
 
+/* الآية ذات العلامة المرجعية (٢٠٢٦-١١-١٤): تظليل خفيف بلون آخر علامة وُضعت عليها (--mark من
+   MushafPage)، فوق تظليل مقررات الأسابيع ولو أُلغي، وتحت تمييز الضغط المطوّل والاستماع والبحث */
+:root {
+  --mark-k: 34%;
+}
+
+:root[data-theme='dark'] {
+  --mark-k: 42%;
+}
+
+.w--mark,
+:root[data-weeks='off'] .w--mark {
+  background: color-mix(in srgb, var(--mark) var(--mark-k), transparent);
+}
+
 /* الآية المضغوط عليها ضغطًا مطوّلًا، ما دامت بطاقتها مفتوحة */
 .w--selected,
 :root[data-weeks='off'] .w--selected {
@@ -162,9 +177,8 @@
   opacity: 0.3;
 }
 
-/* علامة آية لها علامة مرجعية أو ملاحظة: علامة الآية ورقمها كما هما، وفوقها إشارتان صغيرتان —
-   الملاحظة دفتر ملاحظات صغير بلون التمييز أعلاها يمينًا، والعلامة رمز شريطتها بلونها أعلاها يسارًا.
-   ولكلٍّ حدّ رفيع بلون الورق، فتنفصل عن زخرفة العلامة */
+/* علامة آية لها ملاحظة: علامة الآية ورقمها كما هما، وفوقها دفتر ملاحظات صغير أعلاها يمينًا،
+   بحدّ رفيع بلون الورق فينفصل عن زخرفة العلامة */
 .w__end {
   position: relative;
   display: inline-block;
@@ -179,16 +193,6 @@
   height: 0.38em;
   /* أسود (وأبيض في الوضع الداكن ليظهر) — بطلب صاحب المشروع */
   color: #000;
-  filter: drop-shadow(0 0 1px var(--bg)) drop-shadow(0 0 1px var(--bg));
-  pointer-events: none;
-}
-
-.w__ribbon {
-  position: absolute;
-  top: -2%;
-  left: 2%;
-  width: 0.26em;
-  height: 0.34em;
   filter: drop-shadow(0 0 1px var(--bg)) drop-shadow(0 0 1px var(--bg));
   pointer-events: none;
 }
