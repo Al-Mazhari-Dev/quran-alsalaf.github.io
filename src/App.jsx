@@ -21,6 +21,7 @@ import { saveContentRange, saveRange, useUserData } from './lib/userdata.js';
 import { spreadStart } from './lib/layout.js';
 import { hasOpenLayer } from './lib/layers.js';
 import { useRubAlert } from './lib/rubs.js';
+import { onOfflineNotice, verifyDownloads } from './lib/offline.js';
 import './App.css';
 
 // أقصر مدّة تبقى فيها شاشة الافتتاح ولو كانت البيانات جاهزة فورًا من ذاكرة
@@ -96,6 +97,12 @@ export default function App() {
     const t = setTimeout(() => setToast(null), 2600);
     return () => clearTimeout(t);
   }, [toast]);
+  // تحميل القرّاء على الجهاز (src/lib/offline.js): رسالة عند اكتماله أو توقّفه أينما كان المستخدم،
+  // والتحقق عند الفتح أن ما سُجِّل محمَّلًا ما زال محفوظًا
+  useEffect(() => onOfflineNotice(showToast), [showToast]);
+  useEffect(() => {
+    verifyDownloads();
+  }, []);
 
   // الاستماع (الفصل ٦): المقدار المسموع مقدار الاستماع المحدد. وبلا مقدار (٢٠٢٦-١١-١١): من أول الصفحة
   // الظاهرة (أو أول اليمنى من الصفحتين) متتابعًا إلى آخر المصحف، يقلّب الصفحات معه بلا توقف ولا تكرار

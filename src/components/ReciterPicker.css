@@ -111,8 +111,22 @@
   position: relative;
 }
 
-.rcpick__row .rcpick__name {
-  padding-inline-end: 56px;
+.rcpick__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-inline-end: 98px;
+}
+
+/* حالة التحميل تحت الاسم: يُحمَّل… ٤٥٪ · متوقف عند ٤٥٪ · محمَّل على الجهاز */
+.rcpick__status {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.rcpick__status--done {
+  color: var(--accent-text);
 }
 
 .rcpick__tools {
@@ -124,7 +138,8 @@
   gap: 4px;
 }
 
-.rcpick__preview {
+.rcpick__preview,
+.rcpick__save {
   display: grid;
   place-items: center;
   width: 38px;
@@ -134,13 +149,94 @@
 }
 
 .rcpick__preview:active,
-.rcpick__preview--on {
+.rcpick__preview--on,
+.rcpick__save:active {
   background: var(--accent-soft);
 }
 
 .rcpick__preview svg {
   width: 20px;
   height: 20px;
+}
+
+/* زرّ التحميل: سهم، أو دائرة تقدّم، أو ✓ */
+.rcpick__save svg {
+  width: 24px;
+  height: 24px;
+}
+
+.rcpick__save:not([class*='--']) {
+  color: var(--ink-muted);
+}
+
+.rcpick__ring {
+  transition: stroke-dashoffset 250ms linear;
+}
+
+/* تأكيد التحميل أو الحذف: بطاقة وسط الصفحة فوق ستارة */
+.rcpick__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.38);
+}
+
+.rcpick__confirm {
+  width: min(100%, 380px);
+  padding: 20px 20px 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-float);
+}
+
+.rcpick__confirm h3 {
+  margin: 0 0 10px;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.rcpick__confirm p {
+  margin: 0 0 8px;
+  line-height: 1.7;
+}
+
+.rcpick__hint {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
+
+.rcpick__warn {
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+.rcpick__confirm-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.rcpick__btn {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.rcpick__btn--primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.rcpick__btn--danger {
+  background: var(--danger);
+  color: #fff;
 }
 
 .rcpick__spin {
