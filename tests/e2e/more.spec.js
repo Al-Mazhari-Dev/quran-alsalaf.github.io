@@ -256,15 +256,21 @@ test('الأزرار الظاهرة بالفأرة تختفي بعد توقفه�
 });
 
 // ---------- تمييز مقررات الأسابيع ----------
-test('تمييز مقررات الأسابيع يلوّن كلمات المقررات بدرجتين متناوبتين ولا يلوّن ما خارجها', async ({ page }) => {
-  await openApp(page, { 'hq.page': '1' });
-  const a = page.locator('.sheet--current .w--week-a').first();
-  const off = await a.evaluate((el) => getComputedStyle(el).backgroundColor);
+test('تمييز مقررات الأسابيع يظلّل مقررًا والذي بعده بلا تظليل، ولا يظلّل ما خارجها', async ({ page }) => {
+  // الصفحة ٣ فيها حدّ مقررين: آخر الثاني (البقرة ٦–٧) بلا تظليل، وأول الثالث (البقرة ٨) مظلَّل
+  await openApp(page, { 'hq.page': '3' });
+  const bg = (loc) => loc.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const clear = 'rgba(0, 0, 0, 0)';
+  const second = page.locator('.sheet--current .w[data-v="13"]').first();
+  const third = page.locator('.sheet--current .w[data-v="14"]').first();
+  // ملغى افتراضيًّا: لا تظليل
+  expect(await bg(third)).toBe(clear);
   await clickTopbar(page, 'الإعدادات');
   await page.locator('.settings').getByRole('switch', { name: 'تمييز مقررات الأسابيع' }).click();
   await page.keyboard.press('Escape');
-  const on = await a.evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(on).not.toBe(off);
+  expect(await bg(third)).not.toBe(clear);
+  expect(await bg(second)).toBe(clear);
+  await expect(page.locator('.sheet--current .w[data-v="13"].w--week')).toHaveCount(0);
   // صفحة خارج المذكرات: لا تمييز
   await page.evaluate(() => localStorage.setItem('hq.page', '300'));
   await page.reload();

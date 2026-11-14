@@ -40,10 +40,9 @@
   --danger: #c0392b;
   --success: #276c2b;
 
-  /* مقررات الأسابيع: درجتان خفيفتان متناوبتان من لون التطبيق (src/lib/weeks.js) */
-  --week-a: color-mix(in srgb, var(--accent) var(--k-week-a), transparent);
-  --week-b: color-mix(in srgb, var(--accent) var(--k-week-b), transparent);
-  /* الآية الجارية في الاستماع: أقوى بوضوح من أقوى درجتي المقررات، فتُعرف وسط مقررها */
+  /* مقررات الأسابيع: درجة خفيفة من لون التطبيق لمقرر، والذي بعده بلا تظليل (src/lib/weeks.js) */
+  --week: color-mix(in srgb, var(--accent) var(--k-week), transparent);
+  /* الآية الجارية في الاستماع: أقوى بوضوح من تظليل المقررات، فتُعرف وسط مقررها */
   --accent-playing: color-mix(in srgb, var(--accent) var(--k-playing), transparent);
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.08);
