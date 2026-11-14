@@ -90,7 +90,14 @@ test('علامتان على آية واحدة: لون الأحدث، وبإزا�
   const box = await openBookmarkWindow(page, 3);
   const here = box.getByRole('region', { name: 'على هذه الآية' });
   await expect(here.locator('.vmark__name')).toHaveText(['وصلت هنامتنقّلة', 'أخطائيمتعددة']);
+  // الإزالة بتأكيد: «لا» تبقيها، و«نعم» تزيلها
   await here.getByRole('button', { name: 'إزالة «وصلت هنا» عن الآية' }).click();
+  await expect(here.getByRole('alert')).toHaveText(/إزالة «وصلت هنا» عن الآية؟/);
+  await here.getByRole('button', { name: 'لا', exact: true }).click();
+  await expect(here.getByRole('alert')).toHaveCount(0);
+  expect((await stored(page, 'hq.bookmarks'))[1].verses).toHaveLength(1);
+  await here.getByRole('button', { name: 'إزالة «وصلت هنا» عن الآية' }).click();
+  await here.getByRole('button', { name: 'نعم، أزلها' }).click();
   await expect(page.locator('.toast')).toHaveText('أُزيلت علامة «وصلت هنا» عن الآية');
   await expect(here.locator('.vmark__name')).toHaveText(['أخطائيمتعددة']);
   // «وصلت هنا» صارت في «علاماتك الأخرى» بلا آيات
@@ -144,6 +151,12 @@ test('داخل العلامة في القائمة الجانبية: آياتها
 
   // إزالة آية من العلامة
   await rows.nth(1).getByRole('button', { name: 'إزالة الفاتحة ٥ من العلامة' }).click();
+  await expect(rows.nth(1).getByRole('alert')).toHaveText(/إزالة الفاتحة ٥ من العلامة؟/);
+  await rows.nth(1).getByRole('button', { name: 'لا', exact: true }).click();
+  await expect(rows.locator('.sidemenu__rowLabel')).toHaveText(['الفاتحة ٣', 'الفاتحة ٥', 'الكهف ١٠']);
+  expect((await stored(page, 'hq.bookmarks'))[0].verses).toHaveLength(3);
+  await rows.nth(1).getByRole('button', { name: 'إزالة الفاتحة ٥ من العلامة' }).click();
+  await rows.nth(1).getByRole('button', { name: 'نعم، أزلها' }).click();
   await expect(rows.locator('.sidemenu__rowLabel')).toHaveText(['الفاتحة ٣', 'الكهف ١٠']);
   expect((await stored(page, 'hq.bookmarks'))[0].verses.map((x) => x.v)).toEqual([kahf10, 2]);
 
@@ -223,4 +236,23 @@ test('لا علامات: رسالة القائمة الجانبية، ونافذ
   await clickTopbar(page, 'القائمة');
   await side(page).getByRole('tab', { name: 'العلامات' }).click();
   await expect(side(page).locator('.sidemenu__empty')).toBeVisible();
+});
+
+test('حذف علامة بلا آيات يحتاج تأكيدًا أيضًا، و«لا» تبقيها', async ({ page }) => {
+  await openApp(page, { 'hq.page': '1', 'hq.bookmarks': [{ id: 1, name: 'فارغة', color: RED, multi: true, verses: [] }] });
+  await clickTopbar(page, 'القائمة');
+  await side(page).getByRole('tab', { name: 'العلامات' }).click();
+  await side(page).locator('.sidemenu__rowMain').click();
+  await side(page).getByRole('button', { name: 'إعدادات العلامة' }).click();
+  const settings = side(page).getByRole('region', { name: 'إعدادات العلامة' });
+  await settings.getByRole('button', { name: 'حذف العلامة' }).click();
+  await expect(settings).toContainText('حذف العلامة؟');
+  expect(await stored(page, 'hq.bookmarks')).toHaveLength(1);
+  await settings.getByRole('button', { name: 'لا', exact: true }).click();
+  await expect(settings.getByRole('button', { name: 'حذف العلامة' })).toBeVisible();
+  expect(await stored(page, 'hq.bookmarks')).toHaveLength(1);
+  await settings.getByRole('button', { name: 'حذف العلامة' }).click();
+  await settings.getByRole('button', { name: 'نعم، احذفها' }).click();
+  await expect(side(page).locator('.sidemenu__empty')).toBeVisible();
+  expect(await stored(page, 'hq.bookmarks')).toEqual([]);
 });

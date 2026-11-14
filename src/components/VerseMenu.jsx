@@ -141,6 +141,8 @@ function Tiles({ onChoose, noPlay }) {
 function BookmarkChoices({ quran, v, onToast, onDone }) {
   const { bookmarks = [] } = useUserData();
   const [creating, setCreating] = useState(false);
+  // إزالة علامة عن الآية بعد تأكيد (بطلب صاحب المشروع): رقم العلامة المسؤول عن إزالتها
+  const [unplacing, setUnplacing] = useState(null);
   const here = bookmarksAt(bookmarks, v);
   const others = bookmarks.filter((b) => !here.includes(b));
 
@@ -179,23 +181,34 @@ function BookmarkChoices({ quran, v, onToast, onDone }) {
           <h3>على هذه الآية</h3>
           <ul>
             {here.map((b) => (
-              <li key={b.id} className="vmark__row">
+              <li key={b.id} className={`vmark__row${unplacing === b.id ? ' vmark__row--ask' : ''}`}>
                 <span className="vmark__dot" style={{ background: b.color }} />
                 <span className="vmark__name">
                   {b.name}
                   <small>{typeName(b.multi)}</small>
                 </span>
-                <button
-                  type="button"
-                  className="vmark__remove"
-                  aria-label={`إزالة «${b.name}» عن الآية`}
-                  onClick={() => {
-                    unplaceBookmark(b.id, v);
-                    onToast(`أُزيلت علامة «${b.name}» عن الآية`);
-                  }}
-                >
+                <button type="button" className="vmark__remove" aria-label={`إزالة «${b.name}» عن الآية`} onClick={() => setUnplacing(b.id)}>
                   <Icon d="M6 6l12 12M18 6 6 18" />
                 </button>
+                {unplacing === b.id && (
+                  <div className="vmark__ask" role="alert">
+                    <span>إزالة «{b.name}» عن الآية؟</span>
+                    <button
+                      type="button"
+                      className="vmark__yes"
+                      onClick={() => {
+                        unplaceBookmark(b.id, v);
+                        setUnplacing(null);
+                        onToast(`أُزيلت علامة «${b.name}» عن الآية`);
+                      }}
+                    >
+                      نعم، أزلها
+                    </button>
+                    <button type="button" className="vmark__no" onClick={() => setUnplacing(null)}>
+                      لا
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

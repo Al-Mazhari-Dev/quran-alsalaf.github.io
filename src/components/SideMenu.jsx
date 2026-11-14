@@ -260,10 +260,11 @@ function NoteRow({ quran, v, text, onGoto }) {
 }
 
 // داخل العلامة (٢٠٢٦-١١-١٤): اسمها ولونها، وزرّ إعداداتها (الاسم واللون والنوع والحذف)، ثم آياتها
-// بترتيب المصحف: الضغط على الآية ينقل إليها، وزرّ ✕ يزيلها من العلامة
+// بترتيب المصحف: الضغط على الآية ينقل إليها، وزرّ ✕ يزيلها من العلامة بعد تأكيد (بطلب صاحب المشروع)
 function BookmarkDetail({ quran, b, onBack, onGoto }) {
   const [settings, setSettings] = useState(false);
   const [confirm, setConfirm] = useState(null);
+  const [unplacing, setUnplacing] = useState(null);
   const verses = useMemo(() => b.verses.map((x) => x.v).sort((x, y) => x - y), [b.verses]);
 
   const save = (values) => {
@@ -276,8 +277,9 @@ function BookmarkDetail({ quran, b, onBack, onGoto }) {
     setConfirm(null);
     setSettings(false);
   };
+  // حذف العلامة كلها بتأكيد دائمًا، ولو كانت بلا آيات
   const remove = () => {
-    if (b.verses.length && confirm?.kind !== 'delete') {
+    if (confirm?.kind !== 'delete') {
       setConfirm({ kind: 'delete' });
       return;
     }
@@ -325,7 +327,7 @@ function BookmarkDetail({ quran, b, onBack, onGoto }) {
           <div className="bmdetail__danger">
             {confirm?.kind === 'delete' ? (
               <>
-                <span>حذف العلامة وكل آياتها؟</span>
+                <span>{b.verses.length ? 'حذف العلامة وكل آياتها؟' : 'حذف العلامة؟'}</span>
                 <button type="button" className="bmdetail__link bmdetail__link--danger" onClick={remove}>
                   نعم، احذفها
                 </button>
@@ -345,18 +347,33 @@ function BookmarkDetail({ quran, b, onBack, onGoto }) {
       {verses.length ? (
         <ul className="sidemenu__list">
           {verses.map((v) => (
-            <li key={v} className="sidemenu__row">
+            <li key={v} className={`sidemenu__row${unplacing === v ? ' sidemenu__row--ask' : ''}`}>
               <button type="button" className="sidemenu__rowMain" onClick={() => onGoto(v)}>
                 <span className="sidemenu__rowLabel">{verseLabel(quran, [v])}</span>
                 <span className="sidemenu__rowText">{quran.verses[v].t}</span>
               </button>
               <div className="sidemenu__rowActions">
-                <button type="button" aria-label={`إزالة ${verseLabel(quran, [v])} من العلامة`} onClick={() => unplaceBookmark(b.id, v)}>
+                <button type="button" aria-label={`إزالة ${verseLabel(quran, [v])} من العلامة`} onClick={() => setUnplacing(v)}>
                   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                   </svg>
                 </button>
               </div>
+              {unplacing === v && (
+                <div className="bmdetail__ask" role="alert">
+                  <span>إزالة {verseLabel(quran, [v])} من العلامة؟</span>
+                  <button
+                    type="button"
+                    className="bmdetail__link bmdetail__link--danger"
+                    onClick={() => (unplaceBookmark(b.id, v), setUnplacing(null))}
+                  >
+                    نعم، أزلها
+                  </button>
+                  <button type="button" className="bmdetail__link" onClick={() => setUnplacing(null)}>
+                    لا
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>

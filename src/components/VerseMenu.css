@@ -457,3 +457,36 @@
     background: var(--surface-2);
   }
 }
+
+/* تأكيد إزالة العلامة عن الآية: سطر تحت صفّها */
+.vmark__row--ask {
+  flex-wrap: wrap;
+}
+
+.vmark__ask {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+
+.vmark__yes,
+.vmark__no {
+  padding: 4px 2px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: var(--ink);
+}
+
+.vmark__yes {
+  color: #c0392b;
+}
+
+:root[data-theme='dark'] .vmark__yes {
+  color: #f1948a;
+}
