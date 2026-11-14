@@ -42,6 +42,9 @@
     { "id": "husary-muallim", "name": "محمود خليل الحصري", "source": "everyayah", "folder": "Husary_Muallim_128kbps", "group": "muallim", "mb": 2753 },
     { "id": "minshawi-muallim", "name": "محمد صديق المنشاوي", "source": "everyayah", "folder": "Minshawy_Teacher_128kbps", "group": "muallim", "mb": 3145 },
     { "id": "sowaid", "name": "أيمن سويد", "source": "everyayah", "folder": "Ayman_Sowaid_64kbps", "group": "murattal", "mb": 1190 },
-    { "id": "salamah", "name": "ياسر سلامة", "source": "everyayah", "folder": "Yaser_Salamah_128kbps", "group": "murattal", "mb": 1553 }
+    { "id": "salamah", "name": "ياسر سلامة", "source": "everyayah", "folder": "Yaser_Salamah_128kbps", "group": "murattal", "mb": 1553 },
+    { "id": "alaqmi", "name": "أكرم العلاقمي", "source": "everyayah", "folder": "Akram_AlAlaqimy_128kbps", "group": "murattal", "mb": 1617 },
+    { "id": "yassin", "name": "سهل ياسين", "source": "everyayah", "folder": "Sahl_Yassin_128kbps", "group": "murattal", "mb": 1405 },
+    { "id": "alili", "name": "عزيز عليلي", "source": "everyayah", "folder": "aziz_alili_128kbps", "group": "murattal", "mb": 1476 }
   ]
 }

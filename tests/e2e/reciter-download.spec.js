@@ -146,3 +146,31 @@ test('القارئ المحمَّل: التلاوة من الملفات المح
   await expect.poll(() => page.evaluate(() => window.__audio.srcs.length)).toBeGreaterThan(1);
   expect(await page.evaluate(() => window.__audio.srcs.at(-1))).toMatch(/^blob:/);
 });
+
+// القرّاء الثلاثة المضافون (٢٠٢٦-١١-١٤): في مجموعة «مرتّل»، ولكلٍّ زرّ تحميل بحجمه، ويكتمل تحميل ملفاته الـ٦٢٣٦
+test('أكرم العلاقمي وسهل ياسين وعزيز عليلي: في «مرتّل»، وتحميل كل واحد لكامل القرآن بحجمه', async ({ page }) => {
+  await prepare(page, { 'hq.page': '3' });
+  await page.goto('/');
+  await waitMushaf(page);
+  const added = [
+    ['أكرم العلاقمي', 'Akram_AlAlaqimy_128kbps', 'alaqmi', '١٫٦ غيغابايت'],
+    ['سهل ياسين', 'Sahl_Yassin_128kbps', 'yassin', '١٫٤ غيغابايت'],
+    ['عزيز عليلي', 'aziz_alili_128kbps', 'alili', '١٫٥ غيغابايت'],
+  ];
+  for (const [, folder, id] of added) await seedCache(page, folder, id, 6200);
+  await fakeAudio(page);
+  await openPicker(page);
+
+  const murattal = picker(page).locator('section[aria-labelledby="rcpick-murattal"]');
+  for (const [name, folder, id, size] of added) {
+    await expect(murattal.getByRole('radio', { name, exact: true })).toHaveCount(1);
+    await picker(page).getByRole('button', { name: `تحميل ${name} لكامل القرآن` }).click();
+    const ask = page.getByRole('alertdialog', { name: `تحميل ${name}` });
+    await expect(ask).toContainText(size);
+    await ask.getByRole('button', { name: 'تحميل' }).click();
+    await expect(row(page, name).locator('.rcpick__status')).toHaveText('محمَّل على الجهاز');
+    const urls = await page.evaluate(async (id) => (await (await caches.open(`reciter-audio-${id}`)).keys()).map((r) => r.url), id);
+    expect(urls).toHaveLength(6236);
+    expect(urls.every((u) => u.startsWith(`https://everyayah.com/data/${folder}/`))).toBe(true);
+  }
+});

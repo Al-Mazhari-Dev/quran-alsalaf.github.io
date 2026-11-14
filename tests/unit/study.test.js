@@ -108,4 +108,21 @@ describe('القرّاء', () => {
     expect(covers({ missing: [5] }, [4, 5])).toBe(false);
     expect(new Set(RECITERS.map((r) => r.id)).size).toBe(RECITERS.length);
   });
+  it('القرّاء الثلاثة المضافون (٢٠٢٦-١١-١٤): العلاقمي وسهل ياسين وعزيز عليلي، مرتّلون من everyayah بحجم تحميلهم', () => {
+    expect(RECITERS).toHaveLength(37);
+    const added = [
+      ['alaqmi', 'أكرم العلاقمي', 'Akram_AlAlaqimy_128kbps', 1617],
+      ['yassin', 'سهل ياسين', 'Sahl_Yassin_128kbps', 1405],
+      ['alili', 'عزيز عليلي', 'aziz_alili_128kbps', 1476],
+    ];
+    for (const [id, name, folder, mb] of added) {
+      const r = reciterById(id);
+      expect(r).toMatchObject({ id, name, source: 'everyayah', folder, group: 'murattal', mb });
+      expect(reciterTitle(r)).toBe(name);
+      expect(ayahUrl(r, 114, 6)).toBe(`https://everyayah.com/data/${folder}/114006.mp3`);
+    }
+    // في مجموعة «مرتّل» آخرَها، بعد ياسر سلامة
+    const murattal = groupReciters(RECITERS).find((g) => g.id === 'murattal').reciters.map((r) => r.id);
+    expect(murattal.slice(-4)).toEqual(['salamah', 'alaqmi', 'yassin', 'alili']);
+  });
 });
