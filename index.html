@@ -30,7 +30,7 @@
         وكل لون فرعي (البطاقات والحدود والنصوص الثانوية والتظليل) يُشتق منها في src/styles/tokens.css.
         ويُحسب هنا ما يحتاج حساب تباين: درجة النص الملوّن، وألوان خط المصحف.
 
-        • أول فتح: خلفية «رصاصي» إن كان الجهاز على الوضع الداكن، وإلا «بيج»؛ واللون «أزرق».
+        • أول فتح: «بيج» و«ذهبي عنبري» أيًّا كان وضع الجهاز (فاتحًا أو داكنًا).
         • من اختار سابقًا الوضع الداكن (hq.theme) ينتقل إلى «رصاصي»، والفاتح إلى «بيج».
         • من اختار «موف» (أُزيل) ينتقل إلى «بلا لون».
         • بعدها يبقى اختيار المستخدم هو المعتمد ولو تغيّر إعداد النظام.
@@ -142,10 +142,7 @@
         var bgId = get(BG_KEY);
         if (!find(DATA.backgrounds, bgId)) {
           var old = get('hq.theme');
-          var dark = old === 'dark' || old === 'light'
-            ? old === 'dark'
-            : window.matchMedia('(prefers-color-scheme: dark)').matches;
-          bgId = dark ? DATA.defaults.dark : DATA.defaults.light;
+          bgId = old === 'dark' ? DATA.defaults.dark : DATA.defaults.light;
           set(BG_KEY, bgId);
           try { localStorage.removeItem('hq.theme'); } catch (e) {}
         }
