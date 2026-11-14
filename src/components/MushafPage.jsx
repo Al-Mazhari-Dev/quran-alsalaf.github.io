@@ -145,7 +145,7 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
         // الملاحظة دفتر ملاحظات صغير أعلى الدائرة يمينًا، والعلامة رمز شريطتها بلونها أعلاها يسارًا
         const marked = bookmark !== undefined || note;
         // أول كلمة في الربع: علامة ۞ رمز مستقل أول رموزها في خط الصفحة (٢٠٢٦-١١-١٣)، فتُفصل عنها
-        // لتومض وحدها بلون التطبيق عند الوصول إلى الصفحة
+        // لتتلوّن وحدها بلون التطبيق عند الوصول إلى الصفحة: العلامة الأصلية نفسها، بلا نسخة ثانية
         const rub = rubs.has(v) && startsHere.has(v) && firstIndexOf.get(v) === i && quran.verses[v].t[0] === '۞';
         if (rub) {
           const flashing = marks?.rubFlash?.verses.includes(v);
@@ -155,7 +155,6 @@ function Line({ quran, page, line, glyphs, width, opening, centered, gridRow, ma
               <span>
                 <span key={flashing ? `f${marks.rubFlash.n}` : 'r'} className={`w__rub${flashing ? ' w__rub--flash' : ''}`}>
                   {mark}
-                  {flashing && <span className="w__rubFlash">{mark}</span>}
                 </span>
                 {code.slice(1)}
               </span>

@@ -16,7 +16,7 @@ async function flipTo(page, p) {
   expect(await shownPages(page)).toContain(p);
 }
 
-test('الوصول إلى صفحة فيها ۞: تومض العلامة بلون التطبيق وتظهر «بداية ربع الحزب» ثم يزول الوميض', async ({ page }) => {
+test('الوصول إلى صفحة فيها ۞: تتلوّن العلامة الأصلية بلون التطبيق وحولها تظليل صغير وتظهر «بداية ربع الحزب» ثم يزول الوميض', async ({ page }) => {
   await openApp(page, { 'hq.page': '3' });
   await expect(toast(page)).toHaveCount(0);
   const v = idx(2, 26); // ۞ إن الله لا يستحيي — الربع الثاني من الحزب الأول، صفحة ٥
@@ -25,15 +25,35 @@ test('الوصول إلى صفحة فيها ۞: تومض العلامة بلون
   const rub = page.locator(`.sheet--current .w[data-v="${v}"] .w__rub`);
   await expect(rub).toHaveCount(1);
   await expect(rub).toHaveClass(/w__rub--flash/);
-  // النسخة الملوّنة فوق العلامة بلوحة ألوان التطبيق
-  const overlay = rub.locator('.w__rubFlash');
-  await expect(overlay).toHaveCount(1);
-  expect(await overlay.evaluate((el) => getComputedStyle(el).fontPalette)).toBe('--qcf5a');
-  // العلامة وحدها تومض، لا الكلمة بعدها
-  expect(await rub.evaluate((el) => el.firstChild.textContent.length)).toBe(1);
-  // يتلاشى بعد نحو ثلاث ثوانٍ
+  // العلامة الأصلية نفسها تتلوّن بلوحة ألوان التطبيق، بلا نسخة ثانية منها (٢٠٢٦-١١-١٣)
+  expect(await rub.evaluate((el) => getComputedStyle(el).fontPalette)).toBe('--qcf5a');
+  expect(await rub.evaluate((el) => [el.childNodes.length, el.textContent.length])).toEqual([1, 1]);
+  // العلامة وحدها تتلوّن، لا الكلمة بعدها
+  expect(await rub.evaluate((el) => getComputedStyle(el.parentElement).fontPalette)).not.toBe('--qcf5a');
+  // التظليل دائرة صغيرة حول العلامة، لا بارتفاع السطر: داخل حدود السطر، وأصغر منه بكثير، ومركزها
+  // قريب من مركز العلامة نفسها (يُقاس رسمها بخط الصفحة)
+  const geo = await rub.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el, '::before');
+    const fs = parseFloat(getComputedStyle(el).fontSize);
+    const top = r.top + parseFloat(cs.top);
+    const size = parseFloat(cs.height);
+    const c = document.createElement('canvas').getContext('2d');
+    c.font = `${fs}px QCF4P5`;
+    const m = c.measureText(el.textContent);
+    const baseline = r.top + m.fontBoundingBoxAscent;
+    const inkMid = baseline - (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+    const line = el.closest('.line').getBoundingClientRect();
+    return { size, width: parseFloat(cs.width), lineH: line.height, top, bottom: top + size, lineTop: line.top, lineBottom: line.bottom, offset: Math.abs(top + size / 2 - inkMid), fs };
+  });
+  expect(geo.size).toBe(geo.width);
+  expect(geo.size).toBeLessThan(geo.lineH / 2);
+  expect(geo.top).toBeGreaterThanOrEqual(geo.lineTop);
+  expect(geo.bottom).toBeLessThanOrEqual(geo.lineBottom);
+  expect(geo.offset).toBeLessThan(geo.fs * 0.15);
+  // يتلاشى بعد نحو ثلاث ثوانٍ، وتعود العلامة إلى لونها
   await expect(rub).not.toHaveClass(/w__rub--flash/, { timeout: 6000 });
-  await expect(page.locator('.w__rubFlash')).toHaveCount(0);
+  expect(await rub.evaluate((el) => getComputedStyle(el).fontPalette)).toBe('--qcf5');
 });
 
 test('الربع الذي يبدأ بأول سورة: يومض إطار اسمها، والرسالة «بداية نصف الحزب»', async ({ page }) => {
