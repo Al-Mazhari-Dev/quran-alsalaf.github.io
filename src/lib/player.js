@@ -9,8 +9,10 @@
 //   • قبل الآية الأولى من كل سورة (عدا الفاتحة والتوبة) تُقرأ البسملة: وهي آية الفاتحة الأولى
 //     بصوت القارئ نفسه
 //   • التشغيل في الخلفية وأزرار شاشة القفل عبر Media Session
+//   • القارئ المحمَّل على الجهاز (src/lib/offline.js): تُقرأ كل آية من ملفه المحفوظ إن وُجد، وإلا بُثّت
 import { useSyncExternalStore } from 'react';
 import { ayahUrl, covers, reciterById, reciterTitle } from './reciters.js';
+import { hasOfflineFiles, isOfflineComplete, localAudioUrl } from './offline.js';
 import { toArabicDigits } from '../data/quran.js';
 
 const KEY = 'hq.listen';
@@ -165,6 +167,8 @@ export function isDownloaded(q, verses) {
   quran = q;
   const r = reciterById(state.settings.reciter);
   if (!covers(r, suraList(verses))) return false;
+  // القارئ محمَّل كاملًا على الجهاز: كل مقدار يعمل بلا إنترنت
+  if (isOfflineComplete(r.id)) return true;
   return resourcesFor(verses).every((f) => blobUrls.has(f));
 }
 
@@ -220,8 +224,19 @@ function playSegment(next) {
   seg = next;
   set({ status: el.paused ? 'loading' : 'playing', v: next.v, n: state.n + 1 });
   updateMetadata();
+  const remote = ayahUrl(r, next.s, next.a);
+  const local = resolveUrl(remote);
+  // القارئ محمَّل على الجهاز (كله أو بعضه): يُقرأ ملف الآية المحفوظ إن وُجد، وإلا بُثّ
+  if (local === remote && hasOfflineFiles(r.id)) {
+    localAudioUrl(r.id, remote).then((url) => {
+      if (seg !== next) return; // تغيّر المقطع أو توقف التشغيل أثناء البحث
+      el.src = url || remote;
+      if (state.status !== 'paused') el.play().catch(onPlayError);
+    });
+    return;
+  }
   // ملف منزَّل مسبقًا فيُشغَّل مباشرة، وإلا فبثّ مباشر من الشبكة
-  el.src = resolveUrl(ayahUrl(r, next.s, next.a));
+  el.src = local;
   el.play().catch(onPlayError);
 }
 
@@ -383,11 +398,18 @@ export function previewReciter(id, onFail) {
     pause();
   }
   set({ preview: { id, status: 'loading' } });
-  el.src = ayahUrl(reciterById(id), PREVIEW_AYAH.s, PREVIEW_AYAH.a);
-  el.play().catch((e) => {
-    if (token !== previewToken || e?.name === 'AbortError') return;
-    failPreview();
-  });
+  const remote = ayahUrl(reciterById(id), PREVIEW_AYAH.s, PREVIEW_AYAH.a);
+  const start = (url) => {
+    if (token !== previewToken) return;
+    el.src = url;
+    el.play().catch((e) => {
+      if (token !== previewToken || e?.name === 'AbortError') return;
+      failPreview();
+    });
+  };
+  // القارئ المحمَّل على الجهاز تُسمَع معاينته من ملفه المحفوظ، فتعمل بلا إنترنت
+  if (hasOfflineFiles(id)) localAudioUrl(id, remote).then((url) => start(url || remote));
+  else start(remote);
 }
 
 // يوقف المعاينة (إن وُجدت) ويستأنف التلاوة إن أوقفتها المعاينة
