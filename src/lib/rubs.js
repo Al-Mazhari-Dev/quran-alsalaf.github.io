@@ -6,6 +6,7 @@
 // بلون التطبيق (MushafPage). ولا ترويسة للحزب ولا للربع (بقرار صاحب المشروع).
 import { useEffect, useRef, useState } from 'react';
 import { toArabicDigits } from '../data/quran.js';
+import { readRubAlert } from './settings.js';
 
 // نص التنبيه بحسب موضع الربع في حزبه (بطلب صاحب المشروع: هذه الأربع وحدها، بلا رقم الحزب)
 export const RUB_MESSAGES = ['بداية الحزب', 'بداية ربع الحزب', 'بداية نصف الحزب', 'بداية ثلاثة أرباع الحزب'];
@@ -54,7 +55,8 @@ const FALLBACK_MS = 12000;
   التنبيه عند الوصول إلى صفحة فيها بداية ربع. pages: الصفحات الظاهرة الآن (صفحة أو صفحتان).
   يُنبَّه بما ظهر حديثًا منها فقط، لا بما كان ظاهرًا قبل (كتبديل العرض بين صفحة وصفحتين).
   ولا تنبيه عند أول ظهور بعد تعطيله (enabled = false، كأول فتح للتطبيق ووضع القراءة)، إلا أن يُطلب
-  (initial، كصفحة الورد: فتحها انتقال إلى أول الورد).
+  (initial، كصفحة الورد: فتحها انتقال إلى أول الورد). ولا تنبيه إن ألغاه المستخدم من الإعدادات
+  (readRubAlert)، وما ظهر وهو ملغى لا يُنبَّه به إن فُعِّل بعدُ.
   يرجع { verses: [أول آية في كل ربع يومض]، n } أو null.
 */
 export function useRubAlert({ quran, pages, enabled = true, initial = false, onToast }) {
@@ -69,6 +71,7 @@ export function useRubAlert({ quran, pages, enabled = true, initial = false, onT
     }
     const before = prev.current ?? (initial ? [] : pages);
     prev.current = pages;
+    if (!readRubAlert()) return;
     const fresh = pages.filter((p) => !before.includes(p));
     const found = fresh.flatMap((p) => rubsOnPage(quran, p));
     if (!found.length) return;

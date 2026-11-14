@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ACCENTS, BACKGROUNDS, readAppearance, setAccent, setBackground } from '../lib/appearance.js';
-import { readWeeksTint, setWeeksTint } from '../lib/settings.js';
+import { readRubAlert, readWeeksTint, setRubAlert, setWeeksTint } from '../lib/settings.js';
 import AboutContent from './AboutPage.jsx';
 import './SettingsSheet.css';
 import { useLayer } from '../lib/layers.js';
@@ -27,6 +27,7 @@ const FLING_SPEED = 0.5; // px/ms
 export default function SettingsSheet({ open, panel, page = 'main', onPage, onClose, onStartReading }) {
   const [look, setLook] = useState(readAppearance);
   const [weeks, setWeeks] = useState(readWeeksTint);
+  const [rubAlert, setRubAlertOn] = useState(readRubAlert);
   const sub = page !== 'main';
 
   // Esc في الصفحة الفرعية يرجع إلى الإعدادات، وفي الإعدادات يغلق اللوحة
@@ -41,6 +42,11 @@ export default function SettingsSheet({ open, panel, page = 'main', onPage, onCl
   const toggleWeeks = () => {
     setWeeksTint(!weeks);
     setWeeks(!weeks);
+  };
+
+  const toggleRubAlert = () => {
+    setRubAlert(!rubAlert);
+    setRubAlertOn(!rubAlert);
   };
 
   const card = useDragToClose(onClose, open);
@@ -83,6 +89,7 @@ export default function SettingsSheet({ open, panel, page = 'main', onPage, onCl
             <Section title="القراءة">
               <LinkRow label="وضع القراءة" onClick={onStartReading} />
               <SwitchRow label="تمييز مقررات الأسابيع" checked={weeks} onChange={toggleWeeks} />
+              <SwitchRow label="التنبيه ببداية الربع" checked={rubAlert} onChange={toggleRubAlert} />
             </Section>
 
             <Section>

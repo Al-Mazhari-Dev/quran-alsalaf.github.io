@@ -3,7 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as U from '../../src/lib/userdata.js';
 import { readLastPage, saveLastPage } from '../../src/lib/position.js';
-import { READ_SPEED_DEFAULT, readReadingSpeed, readWeeksTint, saveReadingSpeed, setWeeksTint } from '../../src/lib/settings.js';
+import { READ_SPEED_DEFAULT, readReadingSpeed, readRubAlert, readWeeksTint, saveReadingSpeed, setRubAlert, setWeeksTint } from '../../src/lib/settings.js';
 import { addSearchHistory, readSearchHistory, removeSearchHistory } from '../../src/lib/searchHistory.js';
 import { normalizeArabic, search } from '../../src/lib/search.js';
 import { readTafsirSource, saveTafsirSource } from '../../src/lib/study.js';
@@ -186,6 +186,15 @@ describe('إعدادات أخرى', () => {
     setWeeksTint(true);
     expect(readWeeksTint()).toBe(true);
     expect(document.documentElement.getAttribute('data-weeks')).toBe('on');
+  });
+
+  it('التنبيه ببداية الربع مفعَّل افتراضيًّا، وإلغاؤه يُحفظ', () => {
+    expect(readRubAlert()).toBe(true);
+    setRubAlert(false);
+    expect(readRubAlert()).toBe(false);
+    expect(localStorage.getItem('hq.rubAlert')).toBe('off');
+    setRubAlert(true);
+    expect(readRubAlert()).toBe(true);
   });
 
   it('مصدر التفسير: المختصر افتراضيًّا، والميسّر يُحفظ', () => {

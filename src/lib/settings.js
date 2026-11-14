@@ -27,6 +27,29 @@ export function setWeeksTint(on) {
   applyWeeksTint(on);
 }
 
+// التنبيه ببداية الربع (٢٠٢٦-١١-١٤): مفعَّل افتراضيًّا، ويُلغيه المستخدم من الإعدادات. يُقرأ عند كل
+// وصول إلى صفحة (useRubAlert في src/lib/rubs.js)، فيسري تغييره فورًا في المصحف وصفحة الورد.
+const RUB_ALERT_KEY = 'hq.rubAlert';
+// احتياط لتعذّر التخزين: آخر اختيار في هذه الجلسة
+let rubAlertSession = true;
+
+export function readRubAlert() {
+  try {
+    return localStorage.getItem(RUB_ALERT_KEY) !== 'off';
+  } catch {
+    return rubAlertSession;
+  }
+}
+
+export function setRubAlert(on) {
+  try {
+    localStorage.setItem(RUB_ALERT_KEY, on ? 'on' : 'off');
+  } catch {
+    // التخزين غير متاح (تصفح خاص): يسري الاختيار في هذه الجلسة وحدها
+    rubAlertSession = on;
+  }
+}
+
 // حجم خط عناصر الواجهة: خط واحد ثابت لا يتحكم به المستخدم (بقرار صاحب المشروع ٢٠٢٦-٠٩-٢٥،
 // يُلغي ميزة اختيار الحجم). --ui-scale يبقى ثابتًا على ١ في src/styles/tokens.css.
 
